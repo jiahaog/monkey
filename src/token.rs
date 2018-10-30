@@ -4,7 +4,7 @@ pub type TokenType<'a> = &'a str;
 
 pub struct Token<'a> {
     pub token_type: TokenType<'a>,
-    pub literal: &'a str,
+    pub literal: String,
 }
 
 pub const ILLEGAL: TokenType = "ILLEGAL";
@@ -22,9 +22,24 @@ pub const RBRACE: TokenType = "}";
 pub const FUNCTION: TokenType = "FUNCTION";
 pub const LET: TokenType = "LET";
 
-pub fn new_token<'a>(token_type: TokenType<'a>, literal: &'a str) -> Token<'a> {
-    Token {
-        token_type: token_type,
-        literal: literal,
+impl<'a> Token<'a> {
+    pub fn new(token_type: TokenType<'a>, literal: String) -> Token<'a> {
+        Token {
+            token_type: token_type,
+            literal: literal,
+        }
+    }
+
+    pub fn from_literal(literal: String) -> Token<'a> {
+        let token_type = match literal.as_ref() {
+            "fn" => FUNCTION,
+            "let" => LET,
+            _ => IDENT,
+        };
+
+        Token {
+            token_type,
+            literal,
+        }
     }
 }
