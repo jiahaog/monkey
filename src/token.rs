@@ -19,8 +19,24 @@ pub const LPAREN: TokenType = "(";
 pub const RPAREN: TokenType = ")";
 pub const LBRACE: TokenType = "{";
 pub const RBRACE: TokenType = "}";
+pub const MINUS: TokenType = "-";
+pub const BANG: TokenType = "!";
+pub const ASTERISK: TokenType = "*";
+pub const SLASH: TokenType = "/";
+pub const LT: TokenType = "<";
+pub const GT: TokenType = "k";
+
+pub const EQ: TokenType = "==";
+pub const NOT_EQ: TokenType = "!=";
+
+// keywords
 pub const FUNCTION: TokenType = "FUNCTION";
 pub const LET: TokenType = "LET";
+pub const TRUE: TokenType = "TRUE";
+pub const FALSE: TokenType = "FALSE";
+pub const IF: TokenType = "IF";
+pub const ELSE: TokenType = "ELSE";
+pub const RETURN: TokenType = "RETURN";
 
 impl<'a> Token<'a> {
     pub fn new(token_type: TokenType<'a>, literal: String) -> Token<'a> {
@@ -34,6 +50,11 @@ impl<'a> Token<'a> {
         let token_type = match literal.as_ref() {
             "fn" => FUNCTION,
             "let" => LET,
+            "true" => TRUE,
+            "false" => FALSE,
+            "if" => IF,
+            "else" => ELSE,
+            "return" => RETURN,
             _ => IDENT,
         };
 

@@ -37,7 +37,13 @@ impl<'a> Lexer<'a> {
 
     fn next_symbol(&mut self) -> Token<'a> {
         match self.iter.next() {
-            Some('=') => Token::new(ASSIGN, String::from("=")),
+            Some('=') => match self.iter.peek() {
+                Some('=') => {
+                    self.iter.next();
+                    Token::new(EQ, String::from("=="))
+                }
+                _ => Token::new(ASSIGN, String::from("=")),
+            },
             Some('+') => Token::new(PLUS, String::from("+")),
             Some('(') => Token::new(LPAREN, String::from("(")),
             Some(')') => Token::new(RPAREN, String::from(")")),
@@ -45,6 +51,18 @@ impl<'a> Lexer<'a> {
             Some('}') => Token::new(RBRACE, String::from("}")),
             Some(',') => Token::new(COMMA, String::from(",")),
             Some(';') => Token::new(SEMICOLON, String::from(";")),
+            Some('-') => Token::new(MINUS, String::from("-")),
+            Some('!') => match self.iter.peek() {
+                Some('=') => {
+                    self.iter.next();
+                    Token::new(NOT_EQ, String::from("!="))
+                }
+                _ => Token::new(BANG, String::from("!")),
+            },
+            Some('*') => Token::new(ASTERISK, String::from("*")),
+            Some('/') => Token::new(SLASH, String::from("/")),
+            Some('<') => Token::new(LT, String::from("<")),
+            Some('>') => Token::new(GT, String::from(">")),
             Some(ch) => Token::new(ILLEGAL, ch.to_string()),
             None => panic!("None matched for next_symbol"),
         }
@@ -67,7 +85,7 @@ fn is_whitespace(ch: char) -> bool {
 
 fn is_symbol(ch: char) -> bool {
     match ch {
-        '=' | '+' | '(' | ')' | '{' | '}' | ',' | ';' => true,
+        '=' | '+' | '(' | ')' | '{' | '}' | ',' | ';' | '-' | '!' | '*' | '/' | '<' | '>' => true,
         _ => false,
     }
 }
