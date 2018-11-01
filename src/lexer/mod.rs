@@ -6,7 +6,7 @@ use token::*;
 #[cfg(test)]
 mod tests;
 
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     input: &'a str,
     iter: Peekable<Chars<'a>>,
 }
@@ -19,19 +19,19 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next_token(&mut self) -> Token<'a> {
+    pub fn next_token(&mut self) -> Option<Token<'a>> {
         match self.iter.peek() {
             Some(&ch) => match ch {
                 ch if is_whitespace(ch) => {
                     self.iter.next();
                     return self.next_token();
                 }
-                ch if is_symbol(ch) => self.next_symbol(),
-                ch if ch.is_alphabetic() => self.next_identifier(),
-                ch if ch.is_numeric() => self.next_int(),
-                _ => Token::new(ILLEGAL, String::from("")),
+                ch if is_symbol(ch) => Some(self.next_symbol()),
+                ch if ch.is_alphabetic() => Some(self.next_identifier()),
+                ch if ch.is_numeric() => Some(self.next_int()),
+                _ => Some(Token::new(ILLEGAL, String::from(""))),
             },
-            None => Token::new(EOF, String::from("")),
+            None => None,
         }
     }
 
@@ -76,6 +76,14 @@ impl<'a> Lexer<'a> {
     fn next_int(&mut self) -> Token<'a> {
         let literal = consume_while(|ch| ch.is_numeric(), &mut self.iter);
         Token::new(INT, literal)
+    }
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_token()
     }
 }
 

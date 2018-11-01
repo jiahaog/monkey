@@ -5,9 +5,10 @@ fn test_lexer(input: &str, expected: Vec<(token::TokenType, &str)>) {
     let mut lexer = Lexer::new(input);
 
     for (exp_token, exp_literal) in expected {
-        let token = lexer.next_token();
-        assert_eq!(token.literal, exp_literal);
-        assert_eq!(token.token_type, exp_token);
+        if let Some(token) = lexer.next_token() {
+            assert_eq!(token.literal, exp_literal);
+            assert_eq!(token.token_type, exp_token);
+        }
     }
 }
 

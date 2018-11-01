@@ -2,6 +2,7 @@
 
 pub type TokenType<'a> = &'a str;
 
+#[derive(Debug)]
 pub struct Token<'a> {
     pub token_type: TokenType<'a>,
     pub literal: String,
