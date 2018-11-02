@@ -1,7 +1,6 @@
 #[derive(PartialEq, Debug)]
 pub enum Token {
     Illegal(String),
-    EOF,
     Identifier(String),
     Int(String),
     Assign,

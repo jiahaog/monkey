@@ -33,7 +33,6 @@ fn test_next_token_symbols() {
         Slash,
         LessThan,
         GreaterThan,
-        EOF,
     ];
 
     test_lexer(input, expected);
@@ -42,7 +41,7 @@ fn test_next_token_symbols() {
 #[test]
 fn test_next_token_keyword() {
     let input = "let";
-    let expected = vec![Let, EOF];
+    let expected = vec![Let];
 
     test_lexer(input, expected);
 }
@@ -174,7 +173,6 @@ if (5 < 10) {
         NotEqual,
         Int("9".to_string()),
         Semicolon,
-        EOF,
     ];
 
     test_lexer(input, expected);
