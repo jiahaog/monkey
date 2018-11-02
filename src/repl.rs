@@ -24,7 +24,7 @@ where
     W: Write,
 {
     Lexer::new(&s).for_each(|token| {
-        output.write(token.token_type.as_bytes()).unwrap();
+        output.write(format!("{:?}", token).as_bytes()).unwrap();
         output.write(b"\n").unwrap();
     });
 }

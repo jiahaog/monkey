@@ -1,13 +1,13 @@
 use lexer::Lexer;
-use token;
+use token::Token;
+use token::Token::*;
 
-fn test_lexer(input: &str, expected: Vec<(token::TokenType, &str)>) {
+fn test_lexer(input: &str, expected: Vec<Token>) {
     let mut lexer = Lexer::new(input);
 
-    for (exp_token, exp_literal) in expected {
+    for exp_token in expected {
         if let Some(token) = lexer.next_token() {
-            assert_eq!(token.literal, exp_literal);
-            assert_eq!(token.token_type, exp_token);
+            assert_eq!(token, exp_token);
         }
     }
 }
@@ -19,21 +19,21 @@ fn test_next_token_symbols() {
     let input = "=+(){},;-!*/<>";
 
     let expected = vec![
-        (token::ASSIGN, "="),
-        (token::PLUS, "+"),
-        (token::LPAREN, "("),
-        (token::RPAREN, ")"),
-        (token::LBRACE, "{"),
-        (token::RBRACE, "}"),
-        (token::COMMA, ","),
-        (token::SEMICOLON, ";"),
-        (token::MINUS, "-"),
-        (token::BANG, "!"),
-        (token::ASTERISK, "*"),
-        (token::SLASH, "/"),
-        (token::LT, "<"),
-        (token::GT, ">"),
-        (token::EOF, ""),
+        Assign,
+        Plus,
+        LParen,
+        RParen,
+        LBrace,
+        RBrace,
+        Comma,
+        Semicolon,
+        Minus,
+        Bang,
+        Asterisk,
+        Slash,
+        LessThan,
+        GreaterThan,
+        EOF,
     ];
 
     test_lexer(input, expected);
@@ -42,7 +42,7 @@ fn test_next_token_symbols() {
 #[test]
 fn test_next_token_keyword() {
     let input = "let";
-    let expected = vec![(token::LET, "let"), (token::EOF, "")];
+    let expected = vec![Let, EOF];
 
     test_lexer(input, expected);
 }
@@ -50,7 +50,7 @@ fn test_next_token_keyword() {
 #[test]
 fn test_next_token_identifier() {
     let input = "five";
-    let expected = vec![(token::IDENT, "five")];
+    let expected = vec![Identifier("five".to_string())];
 
     test_lexer(input, expected);
 }
@@ -58,7 +58,7 @@ fn test_next_token_identifier() {
 #[test]
 fn test_next_token_int() {
     let input = "123";
-    let expected = vec![(token::INT, "123")];
+    let expected = vec![Int("123".to_string())];
 
     test_lexer(input, expected);
 }
@@ -78,42 +78,42 @@ let result = add(five, ten);
 ";
 
     let expected = vec![
-        (token::LET, "let"),
-        (token::IDENT, "five"),
-        (token::ASSIGN, "="),
-        (token::INT, "5"),
-        (token::SEMICOLON, ";"),
-        (token::LET, "let"),
-        (token::IDENT, "ten"),
-        (token::ASSIGN, "="),
-        (token::INT, "10"),
-        (token::SEMICOLON, ";"),
-        (token::LET, "let"),
-        (token::IDENT, "add"),
-        (token::ASSIGN, "="),
-        (token::FUNCTION, "fn"),
-        (token::LPAREN, "("),
-        (token::IDENT, "x"),
-        (token::COMMA, ","),
-        (token::IDENT, "y"),
-        (token::RPAREN, ")"),
-        (token::LBRACE, "{"),
-        (token::IDENT, "x"),
-        (token::PLUS, "+"),
-        (token::IDENT, "y"),
-        (token::SEMICOLON, ";"),
-        (token::RBRACE, "}"),
-        (token::SEMICOLON, ";"),
-        (token::LET, "let"),
-        (token::IDENT, "result"),
-        (token::ASSIGN, "="),
-        (token::IDENT, "add"),
-        (token::LPAREN, "("),
-        (token::IDENT, "five"),
-        (token::COMMA, ","),
-        (token::IDENT, "ten"),
-        (token::RPAREN, ")"),
-        (token::SEMICOLON, ";"),
+        Let,
+        Identifier("five".to_string()),
+        Assign,
+        Int("5".to_string()),
+        Semicolon,
+        Let,
+        Identifier("ten".to_string()),
+        Assign,
+        Int("10".to_string()),
+        Semicolon,
+        Let,
+        Identifier("add".to_string()),
+        Assign,
+        Function,
+        LParen,
+        Identifier("x".to_string()),
+        Comma,
+        Identifier("y".to_string()),
+        RParen,
+        LBrace,
+        Identifier("x".to_string()),
+        Plus,
+        Identifier("y".to_string()),
+        Semicolon,
+        RBrace,
+        Semicolon,
+        Let,
+        Identifier("result".to_string()),
+        Assign,
+        Identifier("add".to_string()),
+        LParen,
+        Identifier("five".to_string()),
+        Comma,
+        Identifier("ten".to_string()),
+        RParen,
+        Semicolon,
     ];
 
     test_lexer(input, expected);
@@ -123,21 +123,13 @@ let result = add(five, ten);
 fn test_next_token_extended() {
     assert_eq!(2 + 2, 4);
 
-    let input = "let five = 5;
-let ten = 10;
-
-let add = fn(x, y) {
-  x + y;
-};
-
-let result = add(five, ten);
-!-/*5;
+    let input = "!-/*5;
 5 < 10 > 5;
 
 if (5 < 10) {
-	return true;
+        return true;
 } else {
-	return false;
+        return false;
 }
 
 10 == 10;
@@ -145,80 +137,44 @@ if (5 < 10) {
 ";
 
     let expected = vec![
-        (token::LET, "let"),
-        (token::IDENT, "five"),
-        (token::ASSIGN, "="),
-        (token::INT, "5"),
-        (token::SEMICOLON, ";"),
-        (token::LET, "let"),
-        (token::IDENT, "ten"),
-        (token::ASSIGN, "="),
-        (token::INT, "10"),
-        (token::SEMICOLON, ";"),
-        (token::LET, "let"),
-        (token::IDENT, "add"),
-        (token::ASSIGN, "="),
-        (token::FUNCTION, "fn"),
-        (token::LPAREN, "("),
-        (token::IDENT, "x"),
-        (token::COMMA, ","),
-        (token::IDENT, "y"),
-        (token::RPAREN, ")"),
-        (token::LBRACE, "{"),
-        (token::IDENT, "x"),
-        (token::PLUS, "+"),
-        (token::IDENT, "y"),
-        (token::SEMICOLON, ";"),
-        (token::RBRACE, "}"),
-        (token::SEMICOLON, ";"),
-        (token::LET, "let"),
-        (token::IDENT, "result"),
-        (token::ASSIGN, "="),
-        (token::IDENT, "add"),
-        (token::LPAREN, "("),
-        (token::IDENT, "five"),
-        (token::COMMA, ","),
-        (token::IDENT, "ten"),
-        (token::RPAREN, ")"),
-        (token::SEMICOLON, ";"),
-        (token::BANG, "!"),
-        (token::MINUS, "-"),
-        (token::SLASH, "/"),
-        (token::ASTERISK, "*"),
-        (token::INT, "5"),
-        (token::SEMICOLON, ";"),
-        (token::INT, "5"),
-        (token::LT, "<"),
-        (token::INT, "10"),
-        (token::GT, ">"),
-        (token::INT, "5"),
-        (token::SEMICOLON, ";"),
-        (token::IF, "if"),
-        (token::LPAREN, "("),
-        (token::INT, "5"),
-        (token::LT, "<"),
-        (token::INT, "10"),
-        (token::RPAREN, ")"),
-        (token::LBRACE, "{"),
-        (token::RETURN, "return"),
-        (token::TRUE, "true"),
-        (token::SEMICOLON, ";"),
-        (token::RBRACE, "}"),
-        (token::ELSE, "else"),
-        (token::LBRACE, "{"),
-        (token::RETURN, "return"),
-        (token::FALSE, "false"),
-        (token::SEMICOLON, ";"),
-        (token::RBRACE, "}"),
-        (token::INT, "10"),
-        (token::EQ, "=="),
-        (token::INT, "10"),
-        (token::SEMICOLON, ";"),
-        (token::INT, "10"),
-        (token::NOT_EQ, "!="),
-        (token::INT, "9"),
-        (token::SEMICOLON, ";"),
-        (token::EOF, ""),
+        Bang,
+        Minus,
+        Slash,
+        Asterisk,
+        Int("5".to_string()),
+        Semicolon,
+        Int("5".to_string()),
+        LessThan,
+        Int("10".to_string()),
+        GreaterThan,
+        Int("5".to_string()),
+        Semicolon,
+        If,
+        LParen,
+        Int("5".to_string()),
+        LessThan,
+        Int("10".to_string()),
+        RParen,
+        LBrace,
+        Return,
+        True,
+        Semicolon,
+        RBrace,
+        Else,
+        LBrace,
+        Return,
+        False,
+        Semicolon,
+        RBrace,
+        Int("10".to_string()),
+        Equal,
+        Int("10".to_string()),
+        Semicolon,
+        Int("10".to_string()),
+        NotEqual,
+        Int("9".to_string()),
+        Semicolon,
+        EOF,
     ];
 
     test_lexer(input, expected);
