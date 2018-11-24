@@ -21,7 +21,7 @@ fn test_parser(inp: &str, expected: Vec<Statement>) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
-    let program = parser.parse();
+    let program = parser.parse().expect("No parse errors");
     println!("{:?}", program.statements);
 
     for (i, exp_statement) in expected.iter().enumerate() {

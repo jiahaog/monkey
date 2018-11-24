@@ -12,7 +12,14 @@ use token::{Token, Token::*};
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug)]
+struct ParseError {
+    expected: Token,
+    received: Option<Token>,
+}
+
 struct Parser<'a> {
+    // TODO remove the peekable type if it's really unnecessary
     iter: Peekable<Lexer<'a>>,
 }
 
@@ -23,45 +30,56 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse(self) -> Program {
-        Program::new(self.collect())
+    fn parse(self) -> Result<Program, ParseError> {
+        // TODO we should collect all errors into a vec, and not just the first one
+        self.collect::<Result<Vec<Statement>, ParseError>>()
+            .map(Program::new)
     }
 
-    fn next_statement(&mut self) -> Option<Statement> {
-        // Ugly hack because peek doesn't work well with match
-        // https://stackoverflow.com/a/26927642/5076225
-        if let Some(true) = self.iter.peek().map(|val| match val {
-            Let => true,
-            _ => false,
-        }) {
-            self.iter.next();
-            self.next_let_statement()
-        } else {
-            None
-        }
+    fn next_statement(&mut self) -> Option<Result<Statement, ParseError>> {
+        self.iter.next().map(|token| match token {
+            Let => self.next_let_statement(),
+            _ => {
+                // TODO other kinds of statements
+                unimplemented!()
+            }
+        })
     }
 
-    fn next_let_statement(&mut self) -> Option<Statement> {
+    fn next_let_statement(&mut self) -> Result<Statement, ParseError> {
+        // TODO if error, grab everything until semicolon so we can at least continue parsing
+        // the next line
         self.iter
             .next()
-            .and_then(|token| match token {
-                Identifier(name) => Some(name),
-                _ => {
-                    println!("Expected identifier");
-                    None
-                }
+            .ok_or(ParseError {
+                expected: Identifier("IDENTIFIER".to_string()),
+                received: None,
+            }).and_then(|token| match token {
+                Identifier(name) => Ok(name),
+                unexpected => Err(ParseError {
+                    expected: Identifier("IDENTIFIER".to_string()),
+                    received: Some(unexpected),
+                }),
             }).and_then(|name| {
                 self.iter
                     .next()
-                    .filter(|token| match token {
-                        Assign => true,
-                        _ => false,
-                    }).and_then(|_| self.next_expression())
+                    .ok_or(ParseError {
+                        expected: Assign,
+                        received: None,
+                    }).and_then(|token| match token {
+                        Assign => Ok(name),
+                        unexpected => Err(ParseError {
+                            expected: Assign,
+                            received: Some(unexpected),
+                        }),
+                    })
+            }).and_then(|name| {
+                self.next_expression()
                     .map(|expression| LetStatement(name, expression))
             })
     }
 
-    fn next_expression(&mut self) -> Option<Expression> {
+    fn next_expression(&mut self) -> Result<Expression, ParseError> {
         // TODO temporary hack to chomp up stuff until the semicolon to make
         // tests pass
         while true {
@@ -74,12 +92,12 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        Some(DummyExpression)
+        Ok(DummyExpression)
     }
 }
 
 impl<'a> Iterator for Parser<'a> {
-    type Item = Statement;
+    type Item = Result<Statement, ParseError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next_statement()
