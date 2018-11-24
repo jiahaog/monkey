@@ -26,21 +26,16 @@ impl<'a> Parser<'a> {
     }
 
     fn next_statement(&mut self) -> Option<Statement> {
-        None
-
-        // TODO this is broken, need to implement Copy on Token
-        // match self.iter.peek() {
-        //     Some(&token) => match token {
-        //         // Let => self.next_let_statement(),
-        //         Let => {
-        //             self.iter.next();
-        //             return None;
-        //         }
-        //         // TODO: Return statements, expression statements
-        //         _ => None,
-        //     },
-        //     None => None,
-        // }
+        // Ugly hack because peek doesn't work well with match
+        // https://stackoverflow.com/a/26927642/5076225
+        if let Some(true) = self.iter.peek().map(|val| match val {
+            Let => true,
+            _ => false,
+        }) {
+            self.next_let_statement()
+        } else {
+            None
+        }
     }
 
     fn next_let_statement(&mut self) -> Option<Statement> {
