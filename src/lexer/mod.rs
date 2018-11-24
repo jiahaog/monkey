@@ -6,6 +6,7 @@ use token::{Token, Token::*};
 mod tests;
 
 pub struct Lexer<'a> {
+    // TODO: is it necessary for this to be peekable?
     iter: Peekable<Chars<'a>>,
 }
 

@@ -22,6 +22,7 @@ fn test_parser(inp: &str, expected: Vec<Statement>) {
     let parser = Parser::new(lexer);
 
     let program = parser.parse();
+    println!("{:?}", program.statements);
 
     for (i, exp_statement) in expected.iter().enumerate() {
         assert_eq!(*exp_statement, program.statements[i]);

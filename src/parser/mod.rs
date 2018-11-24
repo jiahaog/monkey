@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use ast::Expression;
+use ast::Expression::DummyExpression;
 use ast::Program;
 use ast::Statement;
 use ast::Statement::{DummyStatement, LetStatement};
@@ -32,6 +34,7 @@ impl<'a> Parser<'a> {
             Let => true,
             _ => false,
         }) {
+            self.iter.next();
             self.next_let_statement()
         } else {
             None
@@ -39,7 +42,39 @@ impl<'a> Parser<'a> {
     }
 
     fn next_let_statement(&mut self) -> Option<Statement> {
-        None
+        self.iter
+            .next()
+            .and_then(|token| match token {
+                Identifier(name) => Some(name),
+                _ => {
+                    println!("Expected identifier");
+                    None
+                }
+            }).and_then(|name| {
+                self.iter
+                    .next()
+                    .filter(|token| match token {
+                        Assign => true,
+                        _ => false,
+                    }).and_then(|_| self.next_expression())
+                    .map(|expression| LetStatement(name, expression))
+            })
+    }
+
+    fn next_expression(&mut self) -> Option<Expression> {
+        // TODO temporary hack to chomp up stuff until the semicolon to make
+        // tests pass
+        while true {
+            let current = self.iter.next();
+            if let Some(token) = current {
+                if let Semicolon = token {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        Some(DummyExpression)
     }
 }
 
