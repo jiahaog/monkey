@@ -101,6 +101,31 @@ fn test_let_multiple_errors() {
     );
 }
 
+#[test]
+fn test_identifier_expression() {
+    let inp = "foo
+    ";
+    test_parser_success(
+        inp,
+        vec![Statement::ExpressionStatement(Expression::Identifier(
+            "foo".to_string(),
+        ))],
+    );
+}
+
+#[test]
+fn test_identifier_expression_no_semicolon() {
+    let inp = "foo
+    bar";
+    test_parser_success(
+        inp,
+        vec![
+            Statement::ExpressionStatement(Expression::Identifier("foo".to_string())),
+            Statement::ExpressionStatement(Expression::Identifier("bar".to_string())),
+        ],
+    );
+}
+
 fn test_parser_success(inp: &str, expected: Vec<Statement>) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);

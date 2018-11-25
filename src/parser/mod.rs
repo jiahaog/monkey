@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 
+// TODO consistency of named imports
 use ast::Expression;
 use ast::Expression::DummyExpression;
 use ast::Program;
 use ast::Statement;
-use ast::Statement::{LetStatement, ReturnStatement};
+use ast::Statement::{ExpressionStatement, LetStatement, ReturnStatement};
 use lexer::Lexer;
 use std::iter::Peekable;
-use token::{Token, Token::*};
+use token::Token;
 
 #[cfg(test)]
 mod tests;
@@ -23,8 +24,22 @@ struct Parser<'a> {
     lexer: Peekable<Lexer<'a>>,
 }
 
+enum Precedence {
+    Lowest,
+    Equals,
+    LessGreater,
+    Sum,
+    Product,
+    Prefix,
+    Call,
+}
+
 impl<'a> Parser<'a> {
     fn new(lexer: Lexer<'a>) -> Self {
+        // let prefix_parse_map = HashMap::new();
+
+        // prefix_parse_map.insert(Identifier, || DummyExpression);
+
         Parser {
             lexer: lexer.peekable(),
         }
@@ -44,12 +59,9 @@ impl<'a> Parser<'a> {
 
     fn next_statement(&mut self) -> Option<Result<Statement, ParseError>> {
         self.lexer.next().map(|token| match token {
-            Let => self.next_let_statement(),
-            Return => self.next_return_statement(),
-            _ => {
-                // TODO other kinds of statements
-                unimplemented!()
-            }
+            Token::Let => self.next_let_statement(),
+            Token::Return => self.next_return_statement(),
+            token => self.next_expression_statement(token),
         })
     }
 
@@ -74,12 +86,12 @@ impl<'a> Parser<'a> {
         self.lexer
             .next()
             .ok_or(ParseError {
-                expected: Identifier("IDENTIFIER".to_string()),
+                expected: Token::Identifier("IDENTIFIER".to_string()),
                 received: None,
             }).and_then(|token| match token {
-                Identifier(name) => Ok(name),
+                Token::Identifier(name) => Ok(name),
                 unexpected => Err(ParseError {
-                    expected: Identifier("IDENTIFIER".to_string()),
+                    expected: Token::Identifier("IDENTIFIER".to_string()),
                     received: Some(unexpected),
                 }),
             })
@@ -89,12 +101,12 @@ impl<'a> Parser<'a> {
         self.lexer
             .next()
             .ok_or(ParseError {
-                expected: Assign,
+                expected: Token::Assign,
                 received: None,
             }).and_then(|token| match token {
-                Assign => Ok(token),
+                Token::Assign => Ok(token),
                 unexpected => Err(ParseError {
-                    expected: Assign,
+                    expected: Token::Assign,
                     received: Some(unexpected),
                 }),
             })
@@ -104,13 +116,34 @@ impl<'a> Parser<'a> {
         self.next_expression().map(|x| ReturnStatement(x))
     }
 
+    fn next_expression_statement(&mut self, token: Token) -> Result<Statement, ParseError> {
+        self.parse_expression(Precedence::Lowest, token)
+            .map(|x| ExpressionStatement(x))
+    }
+
+    fn parse_expression(
+        &mut self,
+        precedence: Precedence,
+        token: Token,
+    ) -> Result<Expression, ParseError> {
+        self.prefix_parse_token(token)
+    }
+
+    fn prefix_parse_token(&self, token: Token) -> Result<Expression, ParseError> {
+        match token {
+            Token::Identifier(name) => Ok(Expression::Identifier(name)),
+
+            _ => Ok(DummyExpression),
+        }
+    }
+
     fn next_expression(&mut self) -> Result<Expression, ParseError> {
         // TODO temporary hack to chomp up stuff until the semicolon to make
         // tests pass
         loop {
             let current = self.lexer.next();
             if let Some(token) = current {
-                if let Semicolon = token {
+                if let Token::Semicolon = token {
                     break;
                 }
             } else {
