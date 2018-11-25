@@ -12,7 +12,7 @@ use token::{Token, Token::*};
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ParseError {
     expected: Token,
     received: Option<Token>,

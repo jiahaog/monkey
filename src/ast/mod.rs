@@ -12,6 +12,7 @@ pub enum Statement {
     DummyStatement,
 }
 
+#[derive(Debug)]
 pub struct Program {
     // TODO Maybe statements can be an iterator instead...?
     pub statements: Vec<Statement>,
