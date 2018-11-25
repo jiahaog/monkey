@@ -14,8 +14,15 @@ pub enum Expression {
     Identifier(String),
     Boolean(bool),
     IntegerLiteral(usize),
-    PrefixExpression(Operator, Box<Expression>),
-    InfixExpression(Box<Expression>, Operator, Box<Expression>),
+    PrefixExpression {
+        operator: Operator,
+        right: Box<Expression>,
+    },
+    InfixExpression {
+        operator: Operator,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
     // IfExpression,
     // FunctionLiteral,
     // CallExpression,

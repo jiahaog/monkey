@@ -152,7 +152,10 @@ impl<'a> Parser<'a> {
                 expected: Token::Identifier("IDENTIFIER".to_string()),
                 received: None,
             }).and_then(|next_token| self.parse_expression(Precedence::Prefix, next_token))
-            .map(|next_exp| Expression::PrefixExpression(operator, Box::new(next_exp)))
+            .map(|next_exp| Expression::PrefixExpression {
+                operator: operator,
+                right: Box::new(next_exp),
+            })
     }
 
     fn next_expression(&mut self) -> Result<Expression, ParseError> {

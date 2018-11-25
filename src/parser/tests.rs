@@ -146,19 +146,19 @@ fn test_prefix_expressions() {
         (
             "!5;",
             vec![Statement::ExpressionStatement(
-                Expression::PrefixExpression(
-                    Operator::Not,
-                    Box::new(Expression::IntegerLiteral(5)),
-                ),
+                Expression::PrefixExpression {
+                    operator: Operator::Not,
+                    right: Box::new(Expression::IntegerLiteral(5)),
+                },
             )],
         ),
         (
             "-15;",
             vec![Statement::ExpressionStatement(
-                Expression::PrefixExpression(
-                    Operator::Minus,
-                    Box::new(Expression::IntegerLiteral(15)),
-                ),
+                Expression::PrefixExpression {
+                    operator: Operator::Minus,
+                    right: Box::new(Expression::IntegerLiteral(15)),
+                },
             )],
         ),
     ];
