@@ -26,8 +26,8 @@ impl<'a> Lexer<'a> {
                 }
                 ch if is_symbol(ch) => Some(self.next_symbol()),
                 ch if ch.is_alphabetic() => Some(self.next_identifier()),
-                ch if ch.is_numeric() => Some(self.next_int()),
-                _ => Some(Illegal(ch)),
+                ch if ch.is_digit(10) => Some(self.next_int()),
+                _ => Some(Illegal(ch.to_string())),
             },
             None => None,
         }
@@ -61,7 +61,7 @@ impl<'a> Lexer<'a> {
             Some('/') => Slash,
             Some('<') => LessThan,
             Some('>') => GreaterThan,
-            Some(ch) => Illegal(ch),
+            Some(ch) => Illegal(ch.to_string()),
             None => panic!("None matched for next_symbol"),
         }
     }
@@ -72,8 +72,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn next_int(&mut self) -> Token {
-        let literal = consume_while(|ch| ch.is_numeric(), &mut self.iter);
-        Int(literal.to_string())
+        let literal = consume_while(|ch| ch.is_alphanumeric(), &mut self.iter);
+        match literal.parse() {
+            Ok(val) => Int(val),
+            Err(_) => Illegal(literal),
+        }
     }
 }
 

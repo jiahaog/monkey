@@ -57,7 +57,15 @@ fn test_next_token_identifier() {
 #[test]
 fn test_next_token_int() {
     let input = "123";
-    let expected = vec![Int("123".to_string())];
+    let expected = vec![Int(123)];
+
+    test_lexer(input, expected);
+}
+
+#[test]
+fn test_next_token_int_invalid() {
+    let input = "12a3";
+    let expected = vec![Illegal("12a3".to_string())];
 
     test_lexer(input, expected);
 }
@@ -80,12 +88,12 @@ let result = add(five, ten);
         Let,
         Identifier("five".to_string()),
         Assign,
-        Int("5".to_string()),
+        Int(5),
         Semicolon,
         Let,
         Identifier("ten".to_string()),
         Assign,
-        Int("10".to_string()),
+        Int(10),
         Semicolon,
         Let,
         Identifier("add".to_string()),
@@ -140,19 +148,19 @@ if (5 < 10) {
         Minus,
         Slash,
         Asterisk,
-        Int("5".to_string()),
+        Int(5),
         Semicolon,
-        Int("5".to_string()),
+        Int(5),
         LessThan,
-        Int("10".to_string()),
+        Int(10),
         GreaterThan,
-        Int("5".to_string()),
+        Int(5),
         Semicolon,
         If,
         LParen,
-        Int("5".to_string()),
+        Int(5),
         LessThan,
-        Int("10".to_string()),
+        Int(10),
         RParen,
         LBrace,
         Return,
@@ -165,13 +173,13 @@ if (5 < 10) {
         False,
         Semicolon,
         RBrace,
-        Int("10".to_string()),
+        Int(10),
         Equal,
-        Int("10".to_string()),
+        Int(10),
         Semicolon,
-        Int("10".to_string()),
+        Int(10),
         NotEqual,
-        Int("9".to_string()),
+        Int(9),
         Semicolon,
     ];
 

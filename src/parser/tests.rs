@@ -25,7 +25,7 @@ fn test_let_wrong_identifier() {
         inp,
         ParseError {
             expected: Token::Identifier("IDENTIFIER".to_string()),
-            received: Some(Token::Int("1".to_string())),
+            received: Some(Token::Int(1)),
         },
     );
 }
@@ -49,7 +49,7 @@ fn test_let_missing_assign() {
         inp,
         ParseError {
             expected: Token::Assign,
-            received: Some(Token::Int("5".to_string())),
+            received: Some(Token::Int(5)),
         },
     );
 }
