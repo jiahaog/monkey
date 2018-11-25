@@ -47,6 +47,23 @@ impl<'a> Parser<'a> {
     }
 
     fn next_let_statement(&mut self) -> Result<Statement, ParseError> {
+        self.next_let_statement_identifier()
+            .and_then(|name| self.next_let_statement_assign().map(|_| name))
+            .map_err(|err| {
+                // Increment the iterator until the semicolon, so that the next call to
+                // next_let_statement will continue with the next line.
+                // We do this before the success case, because we don't want to call
+                // next_expression() twice
+
+                let _ = self.next_let_statement_expression();
+                err
+            }).and_then(|name| {
+                self.next_let_statement_expression()
+                    .map(|expression| LetStatement(name, expression))
+            })
+    }
+
+    fn next_let_statement_identifier(&mut self) -> Result<String, ParseError> {
         self.iter
             .next()
             .ok_or(ParseError {
@@ -58,37 +75,28 @@ impl<'a> Parser<'a> {
                     expected: Identifier("IDENTIFIER".to_string()),
                     received: Some(unexpected),
                 }),
-            }).and_then(|name| {
-                self.iter
-                    .next()
-                    .ok_or(ParseError {
-                        expected: Assign,
-                        received: None,
-                    }).and_then(|token| match token {
-                        Assign => Ok(name),
-                        unexpected => Err(ParseError {
-                            expected: Assign,
-                            received: Some(unexpected),
-                        }),
-                    })
-            }).map_err(|err| {
-                // Increment the iterator until the semicolon, so that the next call to
-                // next_let_statement will continue with the next line.
-                // We do this before the success case, because we don't want to call
-                // next_expression() twice
-
-                let _ = self.next_expression();
-                err
-            }).and_then(|name| {
-                self.next_expression()
-                    .map(|expression| LetStatement(name, expression))
             })
     }
 
-    fn next_expression(&mut self) -> Result<Expression, ParseError> {
+    fn next_let_statement_assign(&mut self) -> Result<Token, ParseError> {
+        self.iter
+            .next()
+            .ok_or(ParseError {
+                expected: Assign,
+                received: None,
+            }).and_then(|token| match token {
+                Assign => Ok(token),
+                unexpected => Err(ParseError {
+                    expected: Assign,
+                    received: Some(unexpected),
+                }),
+            })
+    }
+
+    fn next_let_statement_expression(&mut self) -> Result<Expression, ParseError> {
         // TODO temporary hack to chomp up stuff until the semicolon to make
         // tests pass
-        while true {
+        loop {
             let current = self.iter.next();
             if let Some(token) = current {
                 if let Semicolon = token {
