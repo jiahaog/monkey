@@ -20,24 +20,30 @@ struct ParseError {
 
 struct Parser<'a> {
     // TODO remove the peekable type if it's really unnecessary
-    iter: Peekable<Lexer<'a>>,
+    lexer: Peekable<Lexer<'a>>,
 }
 
 impl<'a> Parser<'a> {
     fn new(lexer: Lexer<'a>) -> Self {
         Parser {
-            iter: lexer.peekable(),
+            lexer: lexer.peekable(),
         }
     }
 
-    fn parse(self) -> Result<Program, ParseError> {
-        // TODO we should collect all errors into a vec, and not just the first one
-        self.collect::<Result<Vec<Statement>, ParseError>>()
-            .map(Program::new)
+    fn parse(self) -> Result<Program, Vec<ParseError>> {
+        let (oks, fails): (Vec<_>, Vec<_>) = self.partition(Result::is_ok);
+        let values = oks.into_iter().map(Result::unwrap).collect();
+        let errors: Vec<_> = fails.into_iter().map(Result::unwrap_err).collect();
+
+        if errors.len() > 0 {
+            Err(errors)
+        } else {
+            Ok(Program::new(values))
+        }
     }
 
     fn next_statement(&mut self) -> Option<Result<Statement, ParseError>> {
-        self.iter.next().map(|token| match token {
+        self.lexer.next().map(|token| match token {
             Let => self.next_let_statement(),
             _ => {
                 // TODO other kinds of statements
@@ -64,7 +70,7 @@ impl<'a> Parser<'a> {
     }
 
     fn next_let_statement_identifier(&mut self) -> Result<String, ParseError> {
-        self.iter
+        self.lexer
             .next()
             .ok_or(ParseError {
                 expected: Identifier("IDENTIFIER".to_string()),
@@ -79,7 +85,7 @@ impl<'a> Parser<'a> {
     }
 
     fn next_let_statement_assign(&mut self) -> Result<Token, ParseError> {
-        self.iter
+        self.lexer
             .next()
             .ok_or(ParseError {
                 expected: Assign,
@@ -97,7 +103,7 @@ impl<'a> Parser<'a> {
         // TODO temporary hack to chomp up stuff until the semicolon to make
         // tests pass
         loop {
-            let current = self.iter.next();
+            let current = self.lexer.next();
             if let Some(token) = current {
                 if let Semicolon = token {
                     break;

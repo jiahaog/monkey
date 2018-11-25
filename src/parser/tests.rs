@@ -9,13 +9,14 @@ fn test_let_statements() {
     let y = 10;
     let foobar = 838383;";
 
-    let expected = vec![
-        LetStatement("x".to_string(), DummyExpression),
-        LetStatement("y".to_string(), DummyExpression),
-        LetStatement("foobar".to_string(), DummyExpression),
-    ];
-
-    test_parser_success(inp, expected);
+    test_parser_success(
+        inp,
+        vec![
+            LetStatement("x".to_string(), DummyExpression),
+            LetStatement("y".to_string(), DummyExpression),
+            LetStatement("foobar".to_string(), DummyExpression),
+        ],
+    );
 }
 
 #[test]
@@ -23,10 +24,10 @@ fn test_let_wrong_identifier() {
     let inp = "let 1";
     test_parser_error(
         inp,
-        ParseError {
+        vec![ParseError {
             expected: Token::Identifier("IDENTIFIER".to_string()),
             received: Some(Token::Int(1)),
-        },
+        }],
     );
 }
 
@@ -35,10 +36,10 @@ fn test_let_no_identifier() {
     let inp = "let";
     test_parser_error(
         inp,
-        ParseError {
+        vec![ParseError {
             expected: Token::Identifier("IDENTIFIER".to_string()),
             received: None,
-        },
+        }],
     );
 }
 
@@ -47,10 +48,10 @@ fn test_let_missing_assign() {
     let inp = "let x 5;";
     test_parser_error(
         inp,
-        ParseError {
+        vec![ParseError {
             expected: Token::Assign,
             received: Some(Token::Int(5)),
-        },
+        }],
     );
 }
 
@@ -65,6 +66,26 @@ fn test_let_missing_assign() {
 //         },
 //     );
 // }
+//
+#[test]
+fn test_let_multiple_errors() {
+    let inp = "let = 5;
+    let y 10;
+    let foobar = 838383;";
+    test_parser_error(
+        inp,
+        vec![
+            ParseError {
+                expected: Token::Identifier("IDENTIFIER".to_string()),
+                received: Some(Token::Assign),
+            },
+            ParseError {
+                expected: Token::Assign,
+                received: Some(Token::Int(10)),
+            },
+        ],
+    );
+}
 
 fn test_parser_success(inp: &str, expected: Vec<Statement>) {
     let lexer = Lexer::new(inp);
@@ -77,7 +98,7 @@ fn test_parser_success(inp: &str, expected: Vec<Statement>) {
     }
 }
 
-fn test_parser_error(inp: &str, expected_err: ParseError) {
+fn test_parser_error(inp: &str, expected_err: Vec<ParseError>) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
