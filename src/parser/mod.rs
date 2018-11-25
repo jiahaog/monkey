@@ -3,6 +3,7 @@
 // TODO consistency of named imports
 use ast::Expression;
 use ast::Expression::DummyExpression;
+use ast::Operator;
 use ast::Program;
 use ast::Statement;
 use ast::Statement::{ExpressionStatement, LetStatement, ReturnStatement};
@@ -132,13 +133,26 @@ impl<'a> Parser<'a> {
         self.prefix_parse_token(token)
     }
 
-    fn prefix_parse_token(&self, token: Token) -> Result<Expression, ParseError> {
+    fn prefix_parse_token(&mut self, token: Token) -> Result<Expression, ParseError> {
         match token {
             Token::Identifier(name) => Ok(Expression::Identifier(name)),
             Token::Int(value) => Ok(Expression::IntegerLiteral(value)),
-
+            Token::Bang => self.parse_prefix_expression(Operator::Not),
+            Token::Minus => self.parse_prefix_expression(Operator::Minus),
             _ => unimplemented!(),
         }
+    }
+
+    fn parse_prefix_expression(&mut self, operator: Operator) -> Result<Expression, ParseError> {
+        self.lexer
+            .next()
+            .ok_or(ParseError {
+                // TODO this is not a good error type, it should be the rest of the
+                // expression
+                expected: Token::Identifier("IDENTIFIER".to_string()),
+                received: None,
+            }).and_then(|next_token| self.parse_expression(Precedence::Prefix, next_token))
+            .map(|next_exp| Expression::PrefixExpression(operator, Box::new(next_exp)))
     }
 
     fn next_expression(&mut self) -> Result<Expression, ParseError> {

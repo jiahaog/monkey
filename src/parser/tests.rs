@@ -1,4 +1,4 @@
-use ast::{Expression, Expression::DummyExpression, Statement, Statement::*};
+use ast::{Expression, Expression::DummyExpression, Operator, Statement, Statement::*};
 use lexer::Lexer;
 use parser::{ParseError, Parser};
 use token::Token;
@@ -138,6 +138,34 @@ fn test_integer_literal_expression_no_semicolon() {
             Statement::ExpressionStatement(Expression::IntegerLiteral(2)),
         ],
     );
+}
+
+#[test]
+fn test_prefix_expressions() {
+    let cases = vec![
+        (
+            "!5;",
+            vec![Statement::ExpressionStatement(
+                Expression::PrefixExpression(
+                    Operator::Not,
+                    Box::new(Expression::IntegerLiteral(5)),
+                ),
+            )],
+        ),
+        (
+            "-15;",
+            vec![Statement::ExpressionStatement(
+                Expression::PrefixExpression(
+                    Operator::Minus,
+                    Box::new(Expression::IntegerLiteral(15)),
+                ),
+            )],
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_parser_success(inp, expected);
+    }
 }
 
 fn test_parser_success(inp: &str, expected: Vec<Statement>) {

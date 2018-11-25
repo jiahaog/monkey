@@ -6,6 +6,7 @@ pub enum Operator {
     Minus,
     Multiply,
     Divide,
+    Not,
 }
 
 #[derive(PartialEq, Debug)]
