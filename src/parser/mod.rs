@@ -4,7 +4,7 @@ use ast::Expression;
 use ast::Expression::DummyExpression;
 use ast::Program;
 use ast::Statement;
-use ast::Statement::{DummyStatement, LetStatement};
+use ast::Statement::{LetStatement, ReturnStatement};
 use lexer::Lexer;
 use std::iter::Peekable;
 use token::{Token, Token::*};
@@ -45,6 +45,7 @@ impl<'a> Parser<'a> {
     fn next_statement(&mut self) -> Option<Result<Statement, ParseError>> {
         self.lexer.next().map(|token| match token {
             Let => self.next_let_statement(),
+            Return => self.next_return_statement(),
             _ => {
                 // TODO other kinds of statements
                 unimplemented!()
@@ -61,10 +62,10 @@ impl<'a> Parser<'a> {
                 // We do this before the success case, because we don't want to call
                 // next_expression() twice
 
-                let _ = self.next_let_statement_expression();
+                let _ = self.next_expression();
                 err
             }).and_then(|name| {
-                self.next_let_statement_expression()
+                self.next_expression()
                     .map(|expression| LetStatement(name, expression))
             })
     }
@@ -99,7 +100,11 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn next_let_statement_expression(&mut self) -> Result<Expression, ParseError> {
+    fn next_return_statement(&mut self) -> Result<Statement, ParseError> {
+        self.next_expression().map(|x| ReturnStatement(x))
+    }
+
+    fn next_expression(&mut self) -> Result<Expression, ParseError> {
         // TODO temporary hack to chomp up stuff until the semicolon to make
         // tests pass
         loop {

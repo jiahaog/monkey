@@ -1,4 +1,4 @@
-use ast::{Expression, Expression::DummyExpression, Statement, Statement::LetStatement};
+use ast::{Expression, Expression::DummyExpression, Statement, Statement::*};
 use lexer::Lexer;
 use parser::{ParseError, Parser};
 use token::Token;
@@ -15,6 +15,20 @@ fn test_let_statements() {
             LetStatement("x".to_string(), DummyExpression),
             LetStatement("y".to_string(), DummyExpression),
             LetStatement("foobar".to_string(), DummyExpression),
+        ],
+    );
+}
+
+#[test]
+fn test_return_statements() {
+    let inp = "return 5;
+    return 10;";
+
+    test_parser_success(
+        inp,
+        vec![
+            ReturnStatement(DummyExpression),
+            ReturnStatement(DummyExpression),
         ],
     );
 }
