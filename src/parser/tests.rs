@@ -127,6 +127,19 @@ fn test_identifier_expression_no_semicolon() {
     );
 }
 
+#[test]
+fn test_integer_literal_expression_no_semicolon() {
+    let inp = "1;
+    2";
+    test_parser_success(
+        inp,
+        vec![
+            Statement::ExpressionStatement(Expression::IntegerLiteral(1)),
+            Statement::ExpressionStatement(Expression::IntegerLiteral(2)),
+        ],
+    );
+}
+
 fn test_parser_success(inp: &str, expected: Vec<Statement>) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);

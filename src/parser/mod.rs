@@ -135,8 +135,9 @@ impl<'a> Parser<'a> {
     fn prefix_parse_token(&self, token: Token) -> Result<Expression, ParseError> {
         match token {
             Token::Identifier(name) => Ok(Expression::Identifier(name)),
+            Token::Int(value) => Ok(Expression::IntegerLiteral(value)),
 
-            _ => Ok(DummyExpression),
+            _ => unimplemented!(),
         }
     }
 
