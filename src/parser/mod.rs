@@ -47,8 +47,6 @@ impl<'a> Parser<'a> {
     }
 
     fn next_let_statement(&mut self) -> Result<Statement, ParseError> {
-        // TODO if error, grab everything until semicolon so we can at least continue parsing
-        // the next line
         self.iter
             .next()
             .ok_or(ParseError {
@@ -73,6 +71,14 @@ impl<'a> Parser<'a> {
                             received: Some(unexpected),
                         }),
                     })
+            }).map_err(|err| {
+                // Increment the iterator until the semicolon, so that the next call to
+                // next_let_statement will continue with the next line.
+                // We do this before the success case, because we don't want to call
+                // next_expression() twice
+
+                let _ = self.next_expression();
+                err
             }).and_then(|name| {
                 self.next_expression()
                     .map(|expression| LetStatement(name, expression))
