@@ -36,10 +36,6 @@ enum Precedence {
 
 impl<'a> Parser<'a> {
     fn new(lexer: Lexer<'a>) -> Self {
-        // let prefix_parse_map = HashMap::new();
-
-        // prefix_parse_map.insert(Identifier, || DummyExpression);
-
         Parser {
             lexer: lexer.peekable(),
         }
@@ -117,8 +113,15 @@ impl<'a> Parser<'a> {
     }
 
     fn next_expression_statement(&mut self, token: Token) -> Result<Statement, ParseError> {
-        self.parse_expression(Precedence::Lowest, token)
-            .map(|x| ExpressionStatement(x))
+        let result = self
+            .parse_expression(Precedence::Lowest, token)
+            .map(|x| ExpressionStatement(x));
+
+        if let Some(Token::Semicolon) = self.lexer.peek() {
+            self.lexer.next();
+        }
+
+        result
     }
 
     fn parse_expression(

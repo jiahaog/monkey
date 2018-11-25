@@ -103,13 +103,14 @@ fn test_let_multiple_errors() {
 
 #[test]
 fn test_identifier_expression() {
-    let inp = "foo
-    ";
+    let inp = "foo;
+    bar;";
     test_parser_success(
         inp,
-        vec![Statement::ExpressionStatement(Expression::Identifier(
-            "foo".to_string(),
-        ))],
+        vec![
+            Statement::ExpressionStatement(Expression::Identifier("foo".to_string())),
+            Statement::ExpressionStatement(Expression::Identifier("bar".to_string())),
+        ],
     );
 }
 
