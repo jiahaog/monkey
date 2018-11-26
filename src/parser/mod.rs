@@ -15,8 +15,17 @@ use token::Token;
 mod tests;
 
 #[derive(Debug, PartialEq)]
+enum ParseErrorExpected {
+    ExpectedToken(Token),
+    Identifier,
+    Expression,
+    Assignment,
+    PrefixTokenOrExpression,
+}
+
+#[derive(Debug, PartialEq)]
 struct ParseError {
-    expected: Token,
+    expected: ParseErrorExpected,
     received: Option<Token>,
 }
 
@@ -107,12 +116,12 @@ impl<'a> Parser<'a> {
         self.lexer
             .next()
             .ok_or(ParseError {
-                expected: Token::Identifier("IDENTIFIER".to_string()),
+                expected: ParseErrorExpected::Identifier,
                 received: None,
             }).and_then(|token| match token {
                 Token::Identifier(name) => Ok(name),
                 unexpected => Err(ParseError {
-                    expected: Token::Identifier("IDENTIFIER".to_string()),
+                    expected: ParseErrorExpected::Identifier,
                     received: Some(unexpected),
                 }),
             })
@@ -122,12 +131,12 @@ impl<'a> Parser<'a> {
         self.lexer
             .next()
             .ok_or(ParseError {
-                expected: Token::Assign,
+                expected: ParseErrorExpected::Assignment,
                 received: None,
             }).and_then(|token| match token {
                 Token::Assign => Ok(token),
                 unexpected => Err(ParseError {
-                    expected: Token::Assign,
+                    expected: ParseErrorExpected::Assignment,
                     received: Some(unexpected),
                 }),
             })
@@ -153,7 +162,7 @@ impl<'a> Parser<'a> {
         self.lexer
             .next()
             .ok_or(ParseError {
-                expected: Token::Identifier("Expression".to_string()),
+                expected: ParseErrorExpected::Expression,
                 received: None,
             }).and_then(|token| self.prefix_parse_token(token))
             .and_then(|left| self.parse_next_infix_expression(precedence, left))
@@ -224,8 +233,7 @@ impl<'a> Parser<'a> {
             Token::Bang => self.parse_prefix_expression(Operator::Not),
             Token::Minus => self.parse_prefix_expression(Operator::Minus),
             Token::Semicolon => Err(ParseError {
-                // TODO this is not a good error type, it should be the rest of the
-                expected: Token::Identifier("IDENTIFIER".to_string()),
+                expected: ParseErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Semicolon),
             }),
             _ => unimplemented!(),

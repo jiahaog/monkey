@@ -1,6 +1,6 @@
 use ast::{Expression, Expression::DummyExpression, Operator, Statement, Statement::*};
 use lexer::Lexer;
-use parser::{ParseError, Parser};
+use parser::{ParseError, ParseErrorExpected, Parser};
 use token::Token;
 
 #[test]
@@ -39,7 +39,7 @@ fn test_let_wrong_identifier() {
     test_parser_error(
         inp,
         vec![ParseError {
-            expected: Token::Identifier("IDENTIFIER".to_string()),
+            expected: ParseErrorExpected::Identifier,
             received: Some(Token::Int(1)),
         }],
     );
@@ -51,7 +51,7 @@ fn test_let_no_identifier() {
     test_parser_error(
         inp,
         vec![ParseError {
-            expected: Token::Identifier("IDENTIFIER".to_string()),
+            expected: ParseErrorExpected::Identifier,
             received: None,
         }],
     );
@@ -63,7 +63,7 @@ fn test_let_missing_assign() {
     test_parser_error(
         inp,
         vec![ParseError {
-            expected: Token::Assign,
+            expected: ParseErrorExpected::Assignment,
             received: Some(Token::Int(5)),
         }],
     );
@@ -90,11 +90,11 @@ fn test_let_multiple_errors() {
         inp,
         vec![
             ParseError {
-                expected: Token::Identifier("IDENTIFIER".to_string()),
+                expected: ParseErrorExpected::Identifier,
                 received: Some(Token::Assign),
             },
             ParseError {
-                expected: Token::Assign,
+                expected: ParseErrorExpected::Assignment,
                 received: Some(Token::Int(10)),
             },
         ],
@@ -166,6 +166,18 @@ fn test_prefix_expressions() {
             )],
         ),
         (
+            "-!5;",
+            vec![Statement::ExpressionStatement(
+                Expression::PrefixExpression {
+                    operator: Operator::Minus,
+                    right: Box::new(Expression::PrefixExpression {
+                        operator: Operator::Not,
+                        right: Box::new(Expression::IntegerLiteral(5)),
+                    }),
+                },
+            )],
+        ),
+        (
             "-15;",
             vec![Statement::ExpressionStatement(
                 Expression::PrefixExpression {
@@ -187,14 +199,14 @@ fn test_prefix_expressions_error() {
         (
             "-;",
             vec![ParseError {
-                expected: Token::Identifier("IDENTIFIER".to_string()),
+                expected: ParseErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Semicolon),
             }],
         ),
         (
             "-",
             vec![ParseError {
-                expected: Token::Identifier("Expression".to_string()),
+                expected: ParseErrorExpected::Expression,
                 received: None,
             }],
         ),
