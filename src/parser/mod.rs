@@ -1,8 +1,14 @@
 #![allow(dead_code)]
 
+mod error;
+mod precedence;
+#[cfg(test)]
+mod tests;
+
 // TODO consistency of named imports
+use self::error::{ParseError, ParseErrorExpected};
+use self::precedence::Precedence;
 use ast::Expression;
-use ast::Expression::DummyExpression;
 use ast::Operator;
 use ast::Program;
 use ast::Statement;
@@ -11,52 +17,9 @@ use lexer::Lexer;
 use std::iter::Peekable;
 use token::Token;
 
-#[cfg(test)]
-mod tests;
-
-#[derive(Debug, PartialEq)]
-enum ParseErrorExpected {
-    ExpectedToken(Token),
-    Identifier,
-    Expression,
-    Assignment,
-    PrefixTokenOrExpression,
-}
-
-#[derive(Debug, PartialEq)]
-struct ParseError {
-    expected: ParseErrorExpected,
-    received: Option<Token>,
-}
-
 struct Parser<'a> {
     // TODO remove the peekable type if it's really unnecessary
     lexer: Peekable<Lexer<'a>>,
-}
-
-#[derive(PartialOrd, PartialEq)]
-enum Precedence {
-    Lowest,
-    Equals,
-    LessGreater,
-    Sum,
-    Product,
-    Prefix,
-    Call,
-}
-
-fn get_precedence(token: &Token) -> Precedence {
-    match token {
-        Token::Equal => Precedence::Equals,
-        Token::NotEqual => Precedence::Equals,
-        Token::LessThan => Precedence::LessGreater,
-        Token::GreaterThan => Precedence::LessGreater,
-        Token::Plus => Precedence::Sum,
-        Token::Minus => Precedence::Sum,
-        Token::Slash => Precedence::Product,
-        Token::Asterisk => Precedence::Product,
-        _ => Precedence::Lowest,
-    }
 }
 
 impl<'a> Parser<'a> {
@@ -181,7 +144,7 @@ impl<'a> Parser<'a> {
             None => Ok(prev),
             Some(token) => {
                 // recursion here until the condition is broken
-                if precedence < get_precedence(&token) {
+                if precedence < Precedence::from_token(&token) {
                     self.infix_parse_token(prev, token)
                         .and_then(|next_exp| self.parse_next_infix_expression(precedence, next_exp))
                 } else {
@@ -196,7 +159,7 @@ impl<'a> Parser<'a> {
         prev: Expression,
         token: Token,
     ) -> Result<Expression, ParseError> {
-        let precedence = get_precedence(&token);
+        let precedence = Precedence::from_token(&token);
         match token {
             Token::Plus => self.parse_infix_expression(precedence, prev, Operator::Plus),
             Token::Minus => self.parse_infix_expression(precedence, prev, Operator::Minus),
@@ -220,7 +183,7 @@ impl<'a> Parser<'a> {
     ) -> Result<Expression, ParseError> {
         self.parse_expression(precedence)
             .map(|next_exp| Expression::InfixExpression {
-                operator: operator,
+                operator,
                 left: Box::new(left),
                 right: Box::new(next_exp),
             })
@@ -243,7 +206,7 @@ impl<'a> Parser<'a> {
     fn parse_prefix_expression(&mut self, operator: Operator) -> Result<Expression, ParseError> {
         self.parse_expression(Precedence::Prefix)
             .map(|next_exp| Expression::PrefixExpression {
-                operator: operator,
+                operator,
                 right: Box::new(next_exp),
             })
     }
@@ -261,7 +224,7 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        Ok(DummyExpression)
+        Ok(Expression::DummyExpression)
     }
 }
 
