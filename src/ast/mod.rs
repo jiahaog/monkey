@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 #[derive(PartialEq, Debug)]
 pub enum Operator {
     Plus,
@@ -16,30 +14,30 @@ pub enum Operator {
 #[derive(PartialEq, Debug)]
 pub enum Expression {
     Identifier(String),
-    Boolean(bool),
     IntegerLiteral(usize),
     // TODO remove the `Expression` postfix in the names
-    PrefixExpression {
+    Prefix {
         operator: Operator,
         right: Box<Expression>,
     },
-    InfixExpression {
+    Infix {
         operator: Operator,
         left: Box<Expression>,
         right: Box<Expression>,
     },
+    // TODO
+    // Boolean(bool),
     // IfExpression,
     // FunctionLiteral,
     // CallExpression,
     DummyExpression, // TODO remove me
 }
 
-// TODO remove the `Statement` postfix in the names
 #[derive(PartialEq, Debug)]
 pub enum Statement {
-    LetStatement(String, Expression),
-    ReturnStatement(Expression),
-    ExpressionStatement(Expression),
+    Let(String, Expression),
+    Return(Expression),
+    Expression(Expression),
 }
 
 #[derive(Debug)]

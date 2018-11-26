@@ -1,4 +1,4 @@
-use ast::{Expression, Expression::DummyExpression, Operator, Statement, Statement::*};
+use ast::{Expression, Expression::DummyExpression, Operator, Statement};
 use lexer::Lexer;
 use parser::{ParseError, ParseErrorExpected, Parser};
 use token::Token;
@@ -12,9 +12,9 @@ fn test_let_statements() {
     test_parser_success(
         inp,
         vec![
-            LetStatement("x".to_string(), DummyExpression),
-            LetStatement("y".to_string(), DummyExpression),
-            LetStatement("foobar".to_string(), DummyExpression),
+            Statement::Let("x".to_string(), DummyExpression),
+            Statement::Let("y".to_string(), DummyExpression),
+            Statement::Let("foobar".to_string(), DummyExpression),
         ],
     );
 }
@@ -27,8 +27,8 @@ fn test_return_statements() {
     test_parser_success(
         inp,
         vec![
-            ReturnStatement(DummyExpression),
-            ReturnStatement(DummyExpression),
+            Statement::Return(DummyExpression),
+            Statement::Return(DummyExpression),
         ],
     );
 }
@@ -108,8 +108,8 @@ fn test_identifier_expression() {
     test_parser_success(
         inp,
         vec![
-            Statement::ExpressionStatement(Expression::Identifier("foo".to_string())),
-            Statement::ExpressionStatement(Expression::Identifier("bar".to_string())),
+            Statement::Expression(Expression::Identifier("foo".to_string())),
+            Statement::Expression(Expression::Identifier("bar".to_string())),
         ],
     );
 }
@@ -121,8 +121,8 @@ fn test_identifier_expression() {
 //     test_parser_success(
 //         inp,
 //         vec![
-//             Statement::ExpressionStatement(Expression::Identifier("foo".to_string())),
-//             Statement::ExpressionStatement(Expression::Identifier("bar".to_string())),
+//             Statement::Expression(Expression::Identifier("foo".to_string())),
+//             Statement::Expression(Expression::Identifier("bar".to_string())),
 //         ],
 //     );
 // }
@@ -134,8 +134,8 @@ fn test_identifier_expression() {
 //     test_parser_success(
 //         inp,
 //         vec![
-//             Statement::ExpressionStatement(Expression::IntegerLiteral(1)),
-//             Statement::ExpressionStatement(Expression::IntegerLiteral(2)),
+//             Statement::Expression(Expression::IntegerLiteral(1)),
+//             Statement::Expression(Expression::IntegerLiteral(2)),
 //         ],
 //     );
 // }
@@ -147,8 +147,8 @@ fn test_integer_literal_expression() {
     test_parser_success(
         inp,
         vec![
-            Statement::ExpressionStatement(Expression::IntegerLiteral(1)),
-            Statement::ExpressionStatement(Expression::IntegerLiteral(2)),
+            Statement::Expression(Expression::IntegerLiteral(1)),
+            Statement::Expression(Expression::IntegerLiteral(2)),
         ],
     );
 }
@@ -158,33 +158,27 @@ fn test_prefix_expressions() {
     let cases = vec![
         (
             "!5;",
-            vec![Statement::ExpressionStatement(
-                Expression::PrefixExpression {
-                    operator: Operator::Not,
-                    right: Box::new(Expression::IntegerLiteral(5)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Prefix {
+                operator: Operator::Not,
+                right: Box::new(Expression::IntegerLiteral(5)),
+            })],
         ),
         (
             "-!5;",
-            vec![Statement::ExpressionStatement(
-                Expression::PrefixExpression {
-                    operator: Operator::Minus,
-                    right: Box::new(Expression::PrefixExpression {
-                        operator: Operator::Not,
-                        right: Box::new(Expression::IntegerLiteral(5)),
-                    }),
-                },
-            )],
+            vec![Statement::Expression(Expression::Prefix {
+                operator: Operator::Minus,
+                right: Box::new(Expression::Prefix {
+                    operator: Operator::Not,
+                    right: Box::new(Expression::IntegerLiteral(5)),
+                }),
+            })],
         ),
         (
             "-15;",
-            vec![Statement::ExpressionStatement(
-                Expression::PrefixExpression {
-                    operator: Operator::Minus,
-                    right: Box::new(Expression::IntegerLiteral(15)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Prefix {
+                operator: Operator::Minus,
+                right: Box::new(Expression::IntegerLiteral(15)),
+            })],
         ),
     ];
 
@@ -222,83 +216,67 @@ fn test_infix_expressions() {
     let cases = vec![
         (
             "5 + 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::Plus,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Plus,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
         (
             "5 - 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::Minus,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Minus,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
         (
             "5 * 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::Multiply,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Multiply,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
         (
             "5 / 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::Divide,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Divide,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
         (
             "5 < 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::LessThan,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::LessThan,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
         (
             "5 > 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::GreaterThan,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::GreaterThan,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
         (
             "5 == 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::Equal,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Equal,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
         (
             "5 != 6;",
-            vec![Statement::ExpressionStatement(
-                Expression::InfixExpression {
-                    operator: Operator::NotEqual,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                },
-            )],
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::NotEqual,
+                left: Box::new(Expression::IntegerLiteral(5)),
+                right: Box::new(Expression::IntegerLiteral(6)),
+            })],
         ),
     ];
 

@@ -8,7 +8,8 @@ pub enum Precedence {
     Sum,
     Product,
     Prefix,
-    Call,
+    // TODO
+    // Call,
 }
 
 impl Precedence {

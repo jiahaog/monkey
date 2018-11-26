@@ -5,14 +5,9 @@ mod precedence;
 #[cfg(test)]
 mod tests;
 
-// TODO consistency of named imports
 use self::error::{ParseError, ParseErrorExpected};
 use self::precedence::Precedence;
-use ast::Expression;
-use ast::Operator;
-use ast::Program;
-use ast::Statement;
-use ast::Statement::{ExpressionStatement, LetStatement, ReturnStatement};
+use ast::{Expression, Operator, Program, Statement};
 use lexer::Lexer;
 use std::iter::Peekable;
 use token::Token;
@@ -71,7 +66,7 @@ impl<'a> Parser<'a> {
                 err
             }).and_then(|name| {
                 self.next_expression()
-                    .map(|expression| LetStatement(name, expression))
+                    .map(|expression| Statement::Let(name, expression))
             })
     }
 
@@ -106,13 +101,13 @@ impl<'a> Parser<'a> {
     }
 
     fn next_return_statement(&mut self) -> Result<Statement, ParseError> {
-        self.next_expression().map(|x| ReturnStatement(x))
+        self.next_expression().map(|x| Statement::Return(x))
     }
 
     fn next_expression_statement(&mut self) -> Result<Statement, ParseError> {
         let result = self
             .parse_expression(Precedence::Lowest)
-            .map(|x| ExpressionStatement(x));
+            .map(|x| Statement::Expression(x));
 
         if let Some(Token::Semicolon) = self.lexer.peek() {
             self.lexer.next();
@@ -182,7 +177,7 @@ impl<'a> Parser<'a> {
         operator: Operator,
     ) -> Result<Expression, ParseError> {
         self.parse_expression(precedence)
-            .map(|next_exp| Expression::InfixExpression {
+            .map(|next_exp| Expression::Infix {
                 operator,
                 left: Box::new(left),
                 right: Box::new(next_exp),
@@ -205,7 +200,7 @@ impl<'a> Parser<'a> {
 
     fn parse_prefix_expression(&mut self, operator: Operator) -> Result<Expression, ParseError> {
         self.parse_expression(Precedence::Prefix)
-            .map(|next_exp| Expression::PrefixExpression {
+            .map(|next_exp| Expression::Prefix {
                 operator,
                 right: Box::new(next_exp),
             })
