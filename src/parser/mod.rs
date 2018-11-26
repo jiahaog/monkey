@@ -72,11 +72,18 @@ impl<'a> Parser<'a> {
     }
 
     fn next_statement(&mut self) -> Option<Result<Statement, ParseError>> {
-        self.lexer.next().map(|token| match token {
-            Token::Let => self.next_let_statement(),
-            Token::Return => self.next_return_statement(),
-            token => self.next_expression_statement(token),
-        })
+        match self.lexer.peek() {
+            None => None,
+            Some(Token::Let) => {
+                self.lexer.next();
+                Some(self.next_let_statement())
+            }
+            Some(Token::Return) => {
+                self.lexer.next();
+                Some(self.next_return_statement())
+            }
+            _ => Some(self.next_expression_statement()),
+        }
     }
 
     fn next_let_statement(&mut self) -> Result<Statement, ParseError> {
@@ -130,9 +137,9 @@ impl<'a> Parser<'a> {
         self.next_expression().map(|x| ReturnStatement(x))
     }
 
-    fn next_expression_statement(&mut self, token: Token) -> Result<Statement, ParseError> {
+    fn next_expression_statement(&mut self) -> Result<Statement, ParseError> {
         let result = self
-            .parse_expression(Precedence::Lowest, token)
+            .parse_expression(Precedence::Lowest)
             .map(|x| ExpressionStatement(x));
 
         if let Some(Token::Semicolon) = self.lexer.peek() {
@@ -142,63 +149,55 @@ impl<'a> Parser<'a> {
         result
     }
 
-    fn parse_expression(
-        &mut self,
-        precedence: Precedence,
-        token: Token,
-    ) -> Result<Expression, ParseError> {
-        self.prefix_parse_token(token)
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
+        self.lexer
+            .next()
+            .ok_or(ParseError {
+                expected: Token::Identifier("Expression".to_string()),
+                received: None,
+            }).and_then(|token| self.prefix_parse_token(token))
             .and_then(|left| self.parse_next_infix_expression(precedence, left))
     }
 
     fn parse_next_infix_expression(
         &mut self,
         precedence: Precedence,
-        previous: Expression,
+        prev: Expression,
     ) -> Result<Expression, ParseError> {
         if let Some(Token::Semicolon) = self.lexer.peek() {
-            return Ok(previous);
+            return Ok(prev);
         }
 
-        self.lexer
-            .next()
-            .ok_or(ParseError {
-                // TODO this is not a good error type, it should be a semicolon or the rest of the
-                // expresison
-                expected: Token::Semicolon,
-                received: None,
-            }).and_then(|next_token| {
-                println!("aaaa {:?}", next_token);
-                if let Token::Semicolon = next_token {
-                    println!("bbbb{:?}", next_token);
-                    return Ok(previous);
-                }
-
-                if precedence < get_precedence(&next_token) {
-                    self.infix_parse_token(previous, next_token)
+        match self.lexer.next() {
+            None => Ok(prev),
+            Some(token) => {
+                // recursion here until the condition is broken
+                if precedence < get_precedence(&token) {
+                    self.infix_parse_token(prev, token)
                         .and_then(|next_exp| self.parse_next_infix_expression(precedence, next_exp))
                 } else {
-                    Ok(previous)
+                    Ok(prev)
                 }
-            })
+            }
+        }
     }
 
     fn infix_parse_token(
         &mut self,
-        left: Expression,
+        prev: Expression,
         token: Token,
     ) -> Result<Expression, ParseError> {
         let precedence = get_precedence(&token);
         match token {
-            Token::Plus => self.parse_infix_expression(precedence, left, Operator::Plus),
-            Token::Minus => self.parse_infix_expression(precedence, left, Operator::Minus),
-            Token::Slash => self.parse_infix_expression(precedence, left, Operator::Divide),
-            Token::Asterisk => self.parse_infix_expression(precedence, left, Operator::Multiply),
-            Token::Equal => self.parse_infix_expression(precedence, left, Operator::Equal),
-            Token::NotEqual => self.parse_infix_expression(precedence, left, Operator::NotEqual),
-            Token::LessThan => self.parse_infix_expression(precedence, left, Operator::LessThan),
+            Token::Plus => self.parse_infix_expression(precedence, prev, Operator::Plus),
+            Token::Minus => self.parse_infix_expression(precedence, prev, Operator::Minus),
+            Token::Slash => self.parse_infix_expression(precedence, prev, Operator::Divide),
+            Token::Asterisk => self.parse_infix_expression(precedence, prev, Operator::Multiply),
+            Token::Equal => self.parse_infix_expression(precedence, prev, Operator::Equal),
+            Token::NotEqual => self.parse_infix_expression(precedence, prev, Operator::NotEqual),
+            Token::LessThan => self.parse_infix_expression(precedence, prev, Operator::LessThan),
             Token::GreaterThan => {
-                self.parse_infix_expression(precedence, left, Operator::GreaterThan)
+                self.parse_infix_expression(precedence, prev, Operator::GreaterThan)
             }
             _ => unimplemented!(),
         }
@@ -210,14 +209,7 @@ impl<'a> Parser<'a> {
         left: Expression,
         operator: Operator,
     ) -> Result<Expression, ParseError> {
-        self.lexer
-            .next()
-            .ok_or(ParseError {
-                // TODO this is not a good error type, it should be the rest of the
-                // expression
-                expected: Token::Identifier("IDENTIFIER".to_string()),
-                received: None,
-            }).and_then(|next_token| self.parse_expression(precedence, next_token))
+        self.parse_expression(precedence)
             .map(|next_exp| Expression::InfixExpression {
                 operator: operator,
                 left: Box::new(left),
@@ -241,14 +233,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_prefix_expression(&mut self, operator: Operator) -> Result<Expression, ParseError> {
-        self.lexer
-            .next()
-            .ok_or(ParseError {
-                // TODO this is not a good error type, it should be the rest of the
-                // expression
-                expected: Token::Identifier("rest of expression".to_string()),
-                received: None,
-            }).and_then(|next_token| self.parse_expression(Precedence::Prefix, next_token))
+        self.parse_expression(Precedence::Prefix)
             .map(|next_exp| Expression::PrefixExpression {
                 operator: operator,
                 right: Box::new(next_exp),

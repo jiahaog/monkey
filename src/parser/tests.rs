@@ -194,7 +194,7 @@ fn test_prefix_expressions_error() {
         (
             "-",
             vec![ParseError {
-                expected: Token::Identifier("rest of expression".to_string()),
+                expected: Token::Identifier("Expression".to_string()),
                 received: None,
             }],
         ),
