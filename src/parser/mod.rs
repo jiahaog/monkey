@@ -25,6 +25,7 @@ struct Parser<'a> {
     lexer: Peekable<Lexer<'a>>,
 }
 
+#[derive(PartialOrd, PartialEq)]
 enum Precedence {
     Lowest,
     Equals,
@@ -33,6 +34,20 @@ enum Precedence {
     Product,
     Prefix,
     Call,
+}
+
+fn get_precedence(token: &Token) -> Precedence {
+    match token {
+        Token::Equal => Precedence::Equals,
+        Token::NotEqual => Precedence::Equals,
+        Token::LessThan => Precedence::LessGreater,
+        Token::GreaterThan => Precedence::LessGreater,
+        Token::Plus => Precedence::Sum,
+        Token::Minus => Precedence::Sum,
+        Token::Slash => Precedence::Product,
+        Token::Asterisk => Precedence::Product,
+        _ => Precedence::Lowest,
+    }
 }
 
 impl<'a> Parser<'a> {
@@ -46,6 +61,8 @@ impl<'a> Parser<'a> {
         let (oks, fails): (Vec<_>, Vec<_>) = self.partition(Result::is_ok);
         let values = oks.into_iter().map(Result::unwrap).collect();
         let errors: Vec<_> = fails.into_iter().map(Result::unwrap_err).collect();
+
+        println!("oks: {:?} fails: {:?}", values, errors);
 
         if errors.len() > 0 {
             Err(errors)
@@ -131,6 +148,81 @@ impl<'a> Parser<'a> {
         token: Token,
     ) -> Result<Expression, ParseError> {
         self.prefix_parse_token(token)
+            .and_then(|left| self.parse_next_infix_expression(precedence, left))
+    }
+
+    fn parse_next_infix_expression(
+        &mut self,
+        precedence: Precedence,
+        previous: Expression,
+    ) -> Result<Expression, ParseError> {
+        if let Some(Token::Semicolon) = self.lexer.peek() {
+            return Ok(previous);
+        }
+
+        self.lexer
+            .next()
+            .ok_or(ParseError {
+                // TODO this is not a good error type, it should be a semicolon or the rest of the
+                // expresison
+                expected: Token::Semicolon,
+                received: None,
+            }).and_then(|next_token| {
+                println!("aaaa {:?}", next_token);
+                if let Token::Semicolon = next_token {
+                    println!("bbbb{:?}", next_token);
+                    return Ok(previous);
+                }
+
+                if precedence < get_precedence(&next_token) {
+                    self.infix_parse_token(previous, next_token)
+                        .and_then(|next_exp| self.parse_next_infix_expression(precedence, next_exp))
+                } else {
+                    Ok(previous)
+                }
+            })
+    }
+
+    fn infix_parse_token(
+        &mut self,
+        left: Expression,
+        token: Token,
+    ) -> Result<Expression, ParseError> {
+        let precedence = get_precedence(&token);
+        match token {
+            Token::Plus => self.parse_infix_expression(precedence, left, Operator::Plus),
+            Token::Minus => self.parse_infix_expression(precedence, left, Operator::Minus),
+            Token::Slash => self.parse_infix_expression(precedence, left, Operator::Divide),
+            Token::Asterisk => self.parse_infix_expression(precedence, left, Operator::Multiply),
+            Token::Equal => self.parse_infix_expression(precedence, left, Operator::Equal),
+            Token::NotEqual => self.parse_infix_expression(precedence, left, Operator::NotEqual),
+            Token::LessThan => self.parse_infix_expression(precedence, left, Operator::LessThan),
+            Token::GreaterThan => {
+                self.parse_infix_expression(precedence, left, Operator::GreaterThan)
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn parse_infix_expression(
+        &mut self,
+        precedence: Precedence,
+        left: Expression,
+        operator: Operator,
+    ) -> Result<Expression, ParseError> {
+        self.lexer
+            .next()
+            .ok_or(ParseError {
+                // TODO this is not a good error type, it should be the rest of the
+                // expression
+                expected: Token::Identifier("IDENTIFIER".to_string()),
+                received: None,
+            }).and_then(|next_token| self.parse_expression(precedence, next_token))
+            .map(|next_exp| Expression::InfixExpression {
+                operator: operator,
+                left: Box::new(left),
+                right: Box::new(next_exp),
+            })
     }
 
     fn prefix_parse_token(&mut self, token: Token) -> Result<Expression, ParseError> {
@@ -139,6 +231,11 @@ impl<'a> Parser<'a> {
             Token::Int(value) => Ok(Expression::IntegerLiteral(value)),
             Token::Bang => self.parse_prefix_expression(Operator::Not),
             Token::Minus => self.parse_prefix_expression(Operator::Minus),
+            Token::Semicolon => Err(ParseError {
+                // TODO this is not a good error type, it should be the rest of the
+                expected: Token::Identifier("IDENTIFIER".to_string()),
+                received: Some(Token::Semicolon),
+            }),
             _ => unimplemented!(),
         }
     }
@@ -149,7 +246,7 @@ impl<'a> Parser<'a> {
             .ok_or(ParseError {
                 // TODO this is not a good error type, it should be the rest of the
                 // expression
-                expected: Token::Identifier("IDENTIFIER".to_string()),
+                expected: Token::Identifier("rest of expression".to_string()),
                 received: None,
             }).and_then(|next_token| self.parse_expression(Precedence::Prefix, next_token))
             .map(|next_exp| Expression::PrefixExpression {

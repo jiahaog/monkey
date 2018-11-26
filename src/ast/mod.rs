@@ -7,6 +7,10 @@ pub enum Operator {
     Multiply,
     Divide,
     Not,
+    LessThan,
+    GreaterThan,
+    Equal,
+    NotEqual,
 }
 
 #[derive(PartialEq, Debug)]
@@ -14,6 +18,7 @@ pub enum Expression {
     Identifier(String),
     Boolean(bool),
     IntegerLiteral(usize),
+    // TODO remove the `Expression` postfix in the names
     PrefixExpression {
         operator: Operator,
         right: Box<Expression>,
@@ -29,6 +34,7 @@ pub enum Expression {
     DummyExpression, // TODO remove me
 }
 
+// TODO remove the `Statement` postfix in the names
 #[derive(PartialEq, Debug)]
 pub enum Statement {
     LetStatement(String, Expression),
