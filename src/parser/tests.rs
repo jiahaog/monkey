@@ -285,6 +285,19 @@ fn test_infix_expressions() {
     }
 }
 
+#[test]
+fn test_boolean_expression() {
+    let inp = "true;
+    false;";
+    test_parser_success(
+        inp,
+        vec![
+            Statement::Expression(Expression::Boolean(true)),
+            Statement::Expression(Expression::Boolean(false)),
+        ],
+    );
+}
+
 fn test_parser_success(inp: &str, expected: Vec<Statement>) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);

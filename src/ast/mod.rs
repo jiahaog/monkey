@@ -26,7 +26,7 @@ pub enum Expression {
         right: Box<Expression>,
     },
     // TODO
-    // Boolean(bool),
+    Boolean(bool),
     // IfExpression,
     // FunctionLiteral,
     // CallExpression,

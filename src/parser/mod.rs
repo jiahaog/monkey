@@ -192,6 +192,8 @@ impl<'a> Parser<'a> {
                 expected: ParseErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Semicolon),
             }),
+            Token::True => Ok(Expression::Boolean(true)),
+            Token::False => Ok(Expression::Boolean(false)),
             _ => unimplemented!(),
         }
     }
