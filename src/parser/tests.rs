@@ -286,6 +286,39 @@ fn test_infix_expressions() {
 }
 
 #[test]
+fn test_operator_precedence_expression() {
+    let cases = vec![
+        (
+            "5 + 6 - 7;",
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Minus,
+                left: Box::new(Expression::Infix {
+                    operator: Operator::Plus,
+                    left: Box::new(Expression::IntegerLiteral(5)),
+                    right: Box::new(Expression::IntegerLiteral(6)),
+                }),
+                right: Box::new(Expression::IntegerLiteral(7)),
+            })],
+        ),
+        (
+            "-a * b;",
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Multiply,
+                left: Box::new(Expression::Prefix {
+                    operator: Operator::Minus,
+                    right: Box::new(Expression::Identifier("a".to_string())),
+                }),
+                right: Box::new(Expression::Identifier("b".to_string())),
+            })],
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_parser_success(inp, expected);
+    }
+}
+
+#[test]
 fn test_boolean_expression() {
     let inp = "true;
     false;";

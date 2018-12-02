@@ -135,17 +135,17 @@ impl<'a> Parser<'a> {
             return Ok(prev);
         }
 
-        match self.lexer.next() {
-            None => Ok(prev),
-            Some(token) => {
-                // recursion here until the condition is broken
-                if precedence < Precedence::from_token(&token) {
-                    self.parse_infix_from_token(prev, token)
-                        .and_then(|next_exp| self.next_infix_expression(precedence, next_exp))
-                } else {
-                    Ok(prev)
-                }
-            }
+        // NLL should make this less ugly
+        if let Some(true) = self
+            .lexer
+            .peek()
+            .map(|token| precedence < Precedence::from_token(token))
+        {
+            let x = self.lexer.next().unwrap();
+            self.parse_infix_from_token(prev, x)
+                .and_then(|next_exp| self.next_infix_expression(precedence, next_exp))
+        } else {
+            Ok(prev)
         }
     }
 
