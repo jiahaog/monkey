@@ -29,8 +29,6 @@ impl<'a> Parser<'a> {
         let values = oks.into_iter().map(Result::unwrap).collect();
         let errors: Vec<_> = fails.into_iter().map(Result::unwrap_err).collect();
 
-        println!("oks: {:?} fails: {:?}", values, errors);
-
         if errors.len() > 0 {
             Err(errors)
         } else {

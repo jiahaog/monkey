@@ -286,7 +286,7 @@ fn test_infix_expressions() {
 }
 
 #[test]
-fn test_operator_precedence_expression() {
+fn toldest_operator_precedence_expression() {
     let cases = vec![
         (
             "5 + 6 - 7;",
@@ -319,6 +319,51 @@ fn test_operator_precedence_expression() {
 }
 
 #[test]
+fn test_operator_precedence_expression() {
+    let cases = vec![
+        ("5 + 6 - 7;", "((5 + 6) - 7)"),
+        ("-a * b", "((-a) * b)"),
+        ("!-a", "(!(-a))"),
+        ("a + b + c", "((a + b) + c)"),
+        ("a + b - c", "((a + b) - c)"),
+        ("a * b * c", "((a * b) * c)"),
+        ("a * b / c", "((a * b) / c)"),
+        ("a + b / c", "(a + (b / c))"),
+        // ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+        // ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+        ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+        ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+        (
+            "3 + 4 * 5 == 3 * 1 + 4 * 5",
+            "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        ),
+        ("true", "true"),
+        ("false", "false"),
+        ("3 > 5 == false", "((3 > 5) == false)"),
+        ("3 < 5 == true", "((3 < 5) == true)"),
+        // ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+        // ("(5 + 5) * 2", "((5 + 5) * 2)"),
+        // ("2 / (5 + 5)", "(2 / (5 + 5))"),
+        // ("(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"),
+        // ("-(5 + 5)", "(-(5 + 5))"),
+        // ("!(true == true)", "(!(true == true))"),
+        // ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+        // (
+        //     "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+        //     "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+        // ),
+        // (
+        //     "add(a + b + c * d / f + g)",
+        //     "add((((a + b) + ((c * d) / f)) + g))",
+        // ),
+    ];
+
+    for (inp, expected) in cases {
+        test_parser_success_with_str(inp, expected);
+    }
+}
+
+#[test]
 fn test_boolean_expression() {
     let inp = "true;
     false;";
@@ -340,6 +385,26 @@ fn test_parser_success(inp: &str, expected: Vec<Statement>) {
     for (i, exp_statement) in expected.iter().enumerate() {
         assert_eq!(*exp_statement, program.statements[i]);
     }
+}
+
+// Currently expect only one statement which is an expression statement
+// Use this instead of having to manually write out the AST
+fn test_parser_success_with_str(inp: &str, expected: &str) {
+    let lexer = Lexer::new(inp);
+    let parser = Parser::new(lexer);
+
+    let program = parser.parse().expect("No parse errors");
+
+    if program.statements.len() != 1 {
+        panic!("expected only one statement");
+    }
+
+    let received = match program.statements[0] {
+        Statement::Expression(ref expr) => format!("{}", expr),
+        _ => panic!("Expected a expression statement"),
+    };
+
+    assert_eq!(expected, received);
 }
 
 fn test_parser_error(inp: &str, expected_err: Vec<ParseError>) {
