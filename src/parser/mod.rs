@@ -192,7 +192,8 @@ impl<'a> Parser<'a> {
             }),
             Token::True => Ok(Expression::Boolean(true)),
             Token::False => Ok(Expression::Boolean(false)),
-            _ => unimplemented!(),
+            Token::LParen => self.parse_grouped_expression(),
+            x => unimplemented!("Token: {:?}", x),
         }
     }
 
@@ -201,6 +202,20 @@ impl<'a> Parser<'a> {
             .map(|next_exp| Expression::Prefix {
                 operator,
                 right: Box::new(next_exp),
+            })
+    }
+
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
+        self.next_expression(Precedence::Lowest)
+            .and_then(|expr| match self.lexer.peek() {
+                Some(Token::RParen) => {
+                    self.lexer.next();
+                    Ok(expr)
+                }
+                _ => Err(ParseError {
+                    expected: ParseErrorExpected::ClosingParenthesis,
+                    received: self.lexer.next(),
+                }),
             })
     }
 

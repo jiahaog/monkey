@@ -6,6 +6,7 @@ pub enum ParseErrorExpected {
     Expression,
     Assignment,
     PrefixTokenOrExpression,
+    ClosingParenthesis,
 }
 
 #[derive(Debug, PartialEq)]

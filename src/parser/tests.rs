@@ -286,39 +286,6 @@ fn test_infix_expressions() {
 }
 
 #[test]
-fn toldest_operator_precedence_expression() {
-    let cases = vec![
-        (
-            "5 + 6 - 7;",
-            vec![Statement::Expression(Expression::Infix {
-                operator: Operator::Minus,
-                left: Box::new(Expression::Infix {
-                    operator: Operator::Plus,
-                    left: Box::new(Expression::IntegerLiteral(5)),
-                    right: Box::new(Expression::IntegerLiteral(6)),
-                }),
-                right: Box::new(Expression::IntegerLiteral(7)),
-            })],
-        ),
-        (
-            "-a * b;",
-            vec![Statement::Expression(Expression::Infix {
-                operator: Operator::Multiply,
-                left: Box::new(Expression::Prefix {
-                    operator: Operator::Minus,
-                    right: Box::new(Expression::Identifier("a".to_string())),
-                }),
-                right: Box::new(Expression::Identifier("b".to_string())),
-            })],
-        ),
-    ];
-
-    for (inp, expected) in cases {
-        test_parser_success(inp, expected);
-    }
-}
-
-#[test]
 fn test_operator_precedence_expression() {
     let cases = vec![
         ("5 + 6 - 7;", "((5 + 6) - 7)"),
@@ -329,7 +296,7 @@ fn test_operator_precedence_expression() {
         ("a * b * c", "((a * b) * c)"),
         ("a * b / c", "((a * b) / c)"),
         ("a + b / c", "(a + (b / c))"),
-        // ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+        ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
         // ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
         ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
         ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
@@ -341,12 +308,12 @@ fn test_operator_precedence_expression() {
         ("false", "false"),
         ("3 > 5 == false", "((3 > 5) == false)"),
         ("3 < 5 == true", "((3 < 5) == true)"),
-        // ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
-        // ("(5 + 5) * 2", "((5 + 5) * 2)"),
-        // ("2 / (5 + 5)", "(2 / (5 + 5))"),
-        // ("(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"),
-        // ("-(5 + 5)", "(-(5 + 5))"),
-        // ("!(true == true)", "(!(true == true))"),
+        ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+        ("(5 + 5) * 2", "((5 + 5) * 2)"),
+        ("2 / (5 + 5)", "(2 / (5 + 5))"),
+        ("(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"),
+        ("-(5 + 5)", "(-(5 + 5))"),
+        ("!(true == true)", "(!(true == true))"),
         // ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
         // (
         //     "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
