@@ -286,6 +286,65 @@ fn test_infix_expressions() {
 }
 
 #[test]
+fn test_if_expression() {
+    let cases = vec![
+        (
+            "if (x < y) { x } else { y }",
+            vec![Statement::Expression(Expression::If {
+                condition: Box::new(Expression::Infix {
+                    operator: Operator::LessThan,
+                    left: Box::new(Expression::Identifier("x".to_string())),
+                    right: Box::new(Expression::Identifier("y".to_string())),
+                }),
+                consequence: vec![Statement::Expression(Expression::Identifier(
+                    "x".to_string(),
+                ))],
+                alternative: vec![Statement::Expression(Expression::Identifier(
+                    "y".to_string(),
+                ))],
+            })],
+        ),
+        (
+            "if (x < y) { x; true; } else { y; false; }",
+            vec![Statement::Expression(Expression::If {
+                condition: Box::new(Expression::Infix {
+                    operator: Operator::LessThan,
+                    left: Box::new(Expression::Identifier("x".to_string())),
+                    right: Box::new(Expression::Identifier("y".to_string())),
+                }),
+                consequence: vec![
+                    Statement::Expression(Expression::Identifier("x".to_string())),
+                    Statement::Expression(Expression::Boolean(true)),
+                ],
+                alternative: vec![
+                    Statement::Expression(Expression::Identifier("y".to_string())),
+                    Statement::Expression(Expression::Boolean(false)),
+                ],
+            })],
+        ),
+        (
+            "if (x < y) { x; true; }",
+            vec![Statement::Expression(Expression::If {
+                condition: Box::new(Expression::Infix {
+                    operator: Operator::LessThan,
+                    left: Box::new(Expression::Identifier("x".to_string())),
+                    right: Box::new(Expression::Identifier("y".to_string())),
+                }),
+                consequence: vec![
+                    Statement::Expression(Expression::Identifier("x".to_string())),
+                    Statement::Expression(Expression::Boolean(true)),
+                ],
+                alternative: vec![],
+            })],
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_parser_success(inp, expected);
+    }
+}
+
+#[test]
 fn test_operator_precedence_expression() {
     let cases = vec![
         ("5 + 6 - 7;", "((5 + 6) - 7)"),

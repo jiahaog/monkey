@@ -7,6 +7,7 @@ pub enum ParseErrorExpected {
     Assignment,
     PrefixTokenOrExpression,
     ClosingParenthesis,
+    ParenthesisForIfCondition,
 }
 
 #[derive(Debug, PartialEq)]

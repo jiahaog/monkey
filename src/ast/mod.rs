@@ -52,7 +52,11 @@ pub enum Expression {
     },
     // TODO
     Boolean(bool),
-    // IfExpression,
+    If {
+        condition: Box<Expression>,
+        consequence: Vec<Statement>,
+        alternative: Vec<Statement>,
+    },
     // FunctionLiteral,
     // CallExpression,
     DummyExpression, // TODO remove me
