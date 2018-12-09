@@ -67,18 +67,18 @@ fn test_let_missing_assign() {
     );
 }
 
-// #[test]
-// fn test_let_missing_expression() {
-//     let inp = "let x = ;";
-//     test_parser_error(
-//         inp,
-//         ParseError {
-//             expected: Token::Assign, // ?? idk
-//             received: Some(Token::Semicolon),
-//         },
-//     );
-// }
-//
+#[test]
+fn test_let_missing_expression() {
+    let inp = "let x = ;";
+    test_parser_error(
+        inp,
+        vec![ParseError {
+            expected: ParseErrorExpected::PrefixTokenOrExpression,
+            received: Some(Token::Semicolon),
+        }],
+    );
+}
+
 #[test]
 fn test_let_multiple_errors() {
     let inp = "let = 5;
@@ -112,31 +112,18 @@ fn test_identifier_expression() {
     );
 }
 
-// #[test]
-// fn test_identifier_expression_no_semicolon() {
-//     let inp = "foo
-//     bar";
-//     test_parser_success(
-//         inp,
-//         vec![
-//             Statement::Expression(Expression::Identifier("foo".to_string())),
-//             Statement::Expression(Expression::Identifier("bar".to_string())),
-//         ],
-//     );
-// }
-
-// #[test]
-// fn test_integer_literal_expression_no_semicolon() {
-//     let inp = "1;
-//     2";
-//     test_parser_success(
-//         inp,
-//         vec![
-//             Statement::Expression(Expression::IntegerLiteral(1)),
-//             Statement::Expression(Expression::IntegerLiteral(2)),
-//         ],
-//     );
-// }
+#[test]
+fn test_identifier_expression_no_semicolon() {
+    let inp = "foo
+    bar";
+    test_parser_success(
+        inp,
+        vec![
+            Statement::Expression(Expression::Identifier("foo".to_string())),
+            Statement::Expression(Expression::Identifier("bar".to_string())),
+        ],
+    );
+}
 
 #[test]
 fn test_integer_literal_expression() {
