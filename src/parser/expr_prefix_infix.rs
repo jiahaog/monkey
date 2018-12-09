@@ -24,21 +24,14 @@ impl<'a> Parser<'a> {
         precedence: Precedence,
         prev: Expression,
     ) -> Result<Expression, ParseError> {
-        if let Some(Token::Semicolon) = self.lexer.peek() {
-            return Ok(prev);
-        }
-
-        // NLL should make this less ugly
-        if let Some(true) = self
-            .lexer
-            .peek()
-            .map(|token| precedence < Precedence::from_token(token))
-        {
-            let x = self.lexer.next().unwrap();
-            self.parse_infix_from_token(prev, x)
-                .and_then(|next_exp| self.next_infix_expression(precedence, next_exp))
-        } else {
-            Ok(prev)
+        match self.lexer.peek() {
+            Some(Token::Semicolon) => Ok(prev),
+            Some(token) if precedence < Precedence::from_token(token) => {
+                let x = self.lexer.next().unwrap();
+                self.parse_infix_from_token(prev, x)
+                    .and_then(|next_exp| self.next_infix_expression(precedence, next_exp))
+            }
+            _ => Ok(prev),
         }
     }
 

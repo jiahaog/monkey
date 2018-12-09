@@ -65,25 +65,25 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_if_expression_alternative(&mut self) -> Result<Vec<Statement>, ParseError> {
-        // Refactor this with NLL
-        if let Some(Token::Else) = self.lexer.peek() {
-            self.lexer.next(); // consume the else
+        match self.lexer.peek() {
+            Some(Token::Else) => {
+                self.lexer.next(); // consume the else
 
-            self.lexer
-                .next()
-                .ok_or(ParseError {
-                    expected: ParseErrorExpected::ParenthesisForIfCondition,
-                    received: None,
-                })
-                .and_then(|token| match token {
-                    Token::LBrace => self.parse_block_statement(),
-                    x => Err(ParseError {
+                self.lexer
+                    .next()
+                    .ok_or(ParseError {
                         expected: ParseErrorExpected::ParenthesisForIfCondition,
-                        received: Some(x),
-                    }),
-                })
-        } else {
-            Ok(Vec::new())
+                        received: None,
+                    })
+                    .and_then(|token| match token {
+                        Token::LBrace => self.parse_block_statement(),
+                        x => Err(ParseError {
+                            expected: ParseErrorExpected::ParenthesisForIfCondition,
+                            received: Some(x),
+                        }),
+                    })
+            }
+            _ => Ok(Vec::new()),
         }
     }
 
