@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Program, Statement};
+use crate::ast::{Expression, Operator, Program, Statement};
 use crate::object::Object;
 
 #[cfg(test)]
@@ -26,9 +26,53 @@ impl Eval for Statement {
 
 impl Eval for Expression {
     fn eval(&self) -> Object {
+        // TODO there are some unimplemented cases here
         match self {
-            Expression::IntegerLiteral(val) => Object::Integer(*val),
-            _ => unimplemented!(),
+            // TODO check if this is safe
+            Expression::IntegerLiteral(val) => Object::Integer(*val as isize),
+            Expression::Boolean(val) => Object::from_bool_val(*val),
+            Expression::Prefix { operator, right } => eval_prefix_expr(operator, &right.eval()),
+            Expression::Infix {
+                operator,
+                left,
+                right,
+            } => eval_infix_expr(operator, &left.eval(), &right.eval()),
+            x => unimplemented!("{:?}", x),
         }
+    }
+}
+
+fn eval_prefix_expr(operator: &Operator, right: &Object) -> Object {
+    match (operator, right) {
+        (Operator::Not, Object::Boolean(true)) => Object::from_bool_val(false),
+        (Operator::Not, Object::Boolean(false)) => Object::from_bool_val(true),
+        (Operator::Not, Object::Integer(_)) => Object::from_bool_val(false),
+        (Operator::Minus, Object::Integer(val)) => Object::Integer(-val),
+        // TODO return result instead of panicking on unsupported ops
+        x => unimplemented!("{:?}", x),
+    }
+}
+
+fn eval_infix_expr(operator: &Operator, left: &Object, right: &Object) -> Object {
+    match (operator, left, right) {
+        (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Object::Integer(left_val + right_val)
+        }
+        (Operator::Minus, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Object::Integer(left_val - right_val)
+        }
+        (Operator::Multiply, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Object::Integer(left_val * right_val)
+        }
+        (Operator::Divide, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Object::Integer(left_val / right_val)
+        }
+        // Relying on PartialOrd and PartialEq
+        (Operator::LessThan, left_val, right_val) => Object::from_bool_val(left_val < right_val),
+        (Operator::GreaterThan, left_val, right_val) => Object::from_bool_val(left_val > right_val),
+        (Operator::Equal, left_val, right_val) => Object::from_bool_val(left_val == right_val),
+        (Operator::NotEqual, left_val, right_val) => Object::from_bool_val(left_val != right_val),
+        // TODO return result instead of panicking on unsupported ops
+        x => unimplemented!("{:?}", x),
     }
 }
