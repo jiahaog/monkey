@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Operator, Statement};
+use crate::ast::{Expression, Node, Operator, Statement};
 use crate::lexer::Lexer;
 use crate::parser::{ParseError, ParseErrorExpected, Parser};
 use crate::token::Token;
@@ -445,8 +445,12 @@ fn test_parser_success(inp: &str, expected: Vec<Statement>) {
 
     let program = parser.parse().expect("No parse errors");
 
-    for (i, exp_statement) in expected.iter().enumerate() {
-        assert_eq!(*exp_statement, program.statements[i]);
+    if let Node::Program(statements) = program {
+        for (i, exp_statement) in expected.iter().enumerate() {
+            assert_eq!(*exp_statement, statements[i]);
+        }
+    } else {
+        panic!("Expected Node::Program");
     }
 }
 
@@ -458,16 +462,20 @@ fn test_parser_success_with_str(inp: &str, expected: &str) {
 
     let program = parser.parse().expect("No parse errors");
 
-    if program.statements.len() != 1 {
-        panic!("expected only one statement");
+    if let Node::Program(statements) = program {
+        if statements.len() != 1 {
+            panic!("expected only one statement");
+        }
+
+        let received = match statements[0] {
+            Statement::Expression(ref expr) => format!("{}", expr),
+            _ => panic!("Expected a expression statement"),
+        };
+
+        assert_eq!(expected, received);
+    } else {
+        panic!("Expected Node::Program");
     }
-
-    let received = match program.statements[0] {
-        Statement::Expression(ref expr) => format!("{}", expr),
-        _ => panic!("Expected a expression statement"),
-    };
-
-    assert_eq!(expected, received);
 }
 
 fn test_parser_error(inp: &str, expected_err: Vec<ParseError>) {

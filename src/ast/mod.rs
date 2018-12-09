@@ -8,6 +8,13 @@ use self::Operator::*;
 use self::Statement::*;
 use std::fmt::{Display, Formatter};
 
+#[derive(Debug)]
+pub enum Node {
+    Program(Vec<Statement>),
+    Expression,
+    Statement,
+}
+
 #[derive(PartialEq, Debug)]
 pub enum Operator {
     Plus,
@@ -123,17 +130,5 @@ impl Display for Statement {
             Expression(ref expr) => expr.to_string(),
         };
         write!(f, "{}", string_val)
-    }
-}
-
-#[derive(Debug)]
-pub struct Program {
-    // TODO Maybe statements can be an iterator instead...?
-    pub statements: Vec<Statement>,
-}
-
-impl Program {
-    pub fn new(statements: Vec<Statement>) -> Self {
-        Program { statements }
     }
 }
