@@ -1,4 +1,4 @@
-use ast::{Expression, Operator};
+use crate::ast::{Expression, Operator};
 
 #[test]
 fn test_display() {

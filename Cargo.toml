@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Goh Jia Hao <jiahaog@gmail.com>"]
 description = "Interpreter for the Monkey programming language"
 license = "MIT"
+edition = "2018"
 
 
 [dependencies]

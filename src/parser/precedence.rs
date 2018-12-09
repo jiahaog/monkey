@@ -1,4 +1,4 @@
-use token::Token;
+use crate::token::Token;
 
 #[derive(PartialOrd, PartialEq)]
 pub enum Precedence {

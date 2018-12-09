@@ -1,7 +1,7 @@
-use ast::{Expression, Expression::DummyExpression, Operator, Statement};
-use lexer::Lexer;
-use parser::{ParseError, ParseErrorExpected, Parser};
-use token::Token;
+use crate::ast::{Expression, Expression::DummyExpression, Operator, Statement};
+use crate::lexer::Lexer;
+use crate::parser::{ParseError, ParseErrorExpected, Parser};
+use crate::token::Token;
 
 #[test]
 fn test_let_statements() {

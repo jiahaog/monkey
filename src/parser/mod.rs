@@ -9,10 +9,10 @@ mod tests;
 
 use self::error::{ParseError, ParseErrorExpected};
 use self::precedence::Precedence;
-use ast::{Expression, Program, Statement};
-use lexer::Lexer;
+use crate::ast::{Expression, Program, Statement};
+use crate::lexer::Lexer;
+use crate::token::Token;
 use std::iter::Peekable;
-use token::Token;
 
 pub struct Parser<'a> {
     // TODO remove the peekable type if it's really unnecessary
@@ -64,7 +64,8 @@ impl<'a> Parser<'a> {
 
                 let _ = self.next_expression_dummy();
                 err
-            }).and_then(|name| {
+            })
+            .and_then(|name| {
                 self.next_expression_dummy()
                     .map(|expression| Statement::Let(name, expression))
             })
@@ -76,7 +77,8 @@ impl<'a> Parser<'a> {
             .ok_or(ParseError {
                 expected: ParseErrorExpected::Identifier,
                 received: None,
-            }).and_then(|token| match token {
+            })
+            .and_then(|token| match token {
                 Token::Identifier(name) => Ok(name),
                 unexpected => Err(ParseError {
                     expected: ParseErrorExpected::Identifier,
@@ -91,7 +93,8 @@ impl<'a> Parser<'a> {
             .ok_or(ParseError {
                 expected: ParseErrorExpected::Assignment,
                 received: None,
-            }).and_then(|token| match token {
+            })
+            .and_then(|token| match token {
                 Token::Assign => Ok(token),
                 unexpected => Err(ParseError {
                     expected: ParseErrorExpected::Assignment,

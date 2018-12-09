@@ -1,8 +1,8 @@
-use ast::{Expression, Statement};
-use parser::Parser;
-use parser::Precedence;
-use parser::{ParseError, ParseErrorExpected};
-use token::Token;
+use crate::ast::{Expression, Statement};
+use crate::parser::Parser;
+use crate::parser::Precedence;
+use crate::parser::{ParseError, ParseErrorExpected};
+use crate::token::Token;
 
 impl<'a> Parser<'a> {
     pub(super) fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
@@ -10,10 +10,12 @@ impl<'a> Parser<'a> {
             .and_then(|conditional| {
                 self.parse_if_expression_consequence()
                     .map(|consequence| (conditional, consequence))
-            }).and_then(|(conditional, consequence)| {
+            })
+            .and_then(|(conditional, consequence)| {
                 self.parse_if_expression_alternative()
                     .map(|alternative| (conditional, consequence, alternative))
-            }).map(|(condition, consequence, alternative)| Expression::If {
+            })
+            .map(|(condition, consequence, alternative)| Expression::If {
                 condition: Box::new(condition),
                 consequence: consequence,
                 alternative: alternative,
@@ -26,13 +28,15 @@ impl<'a> Parser<'a> {
             .ok_or(ParseError {
                 expected: ParseErrorExpected::ParenthesisForIfCondition,
                 received: None,
-            }).and_then(|token| match token {
+            })
+            .and_then(|token| match token {
                 Token::LParen => self.next_expression(Precedence::Lowest),
                 x => Err(ParseError {
                     expected: ParseErrorExpected::ParenthesisForIfCondition,
                     received: Some(x),
                 }),
-            }).and_then(|expr| match self.lexer.peek() {
+            })
+            .and_then(|expr| match self.lexer.peek() {
                 Some(Token::RParen) => {
                     self.lexer.next();
                     Ok(expr)
@@ -50,7 +54,8 @@ impl<'a> Parser<'a> {
             .ok_or(ParseError {
                 expected: ParseErrorExpected::ParenthesisForIfCondition,
                 received: None,
-            }).and_then(|token| match token {
+            })
+            .and_then(|token| match token {
                 Token::LBrace => self.parse_block_statement(),
                 x => Err(ParseError {
                     expected: ParseErrorExpected::ParenthesisForIfCondition,
@@ -69,7 +74,8 @@ impl<'a> Parser<'a> {
                 .ok_or(ParseError {
                     expected: ParseErrorExpected::ParenthesisForIfCondition,
                     received: None,
-                }).and_then(|token| match token {
+                })
+                .and_then(|token| match token {
                     Token::LBrace => self.parse_block_statement(),
                     x => Err(ParseError {
                         expected: ParseErrorExpected::ParenthesisForIfCondition,

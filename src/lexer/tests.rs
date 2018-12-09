@@ -1,6 +1,6 @@
-use lexer::Lexer;
-use token::Token;
-use token::Token::*;
+use crate::lexer::Lexer;
+use crate::token::Token;
+use crate::token::Token::*;
 
 fn test_lexer(input: &str, expected: Vec<Token>) {
     let mut lexer = Lexer::new(input);

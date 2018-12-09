@@ -1,8 +1,8 @@
-use ast::{Expression, Operator};
-use parser::Parser;
-use parser::Precedence;
-use parser::{ParseError, ParseErrorExpected};
-use token::Token;
+use crate::ast::{Expression, Operator};
+use crate::parser::Parser;
+use crate::parser::Precedence;
+use crate::parser::{ParseError, ParseErrorExpected};
+use crate::token::Token;
 
 impl<'a> Parser<'a> {
     pub(super) fn next_expression(
@@ -14,7 +14,8 @@ impl<'a> Parser<'a> {
             .ok_or(ParseError {
                 expected: ParseErrorExpected::Expression,
                 received: None,
-            }).and_then(|token| self.next_prefix_expression(token))
+            })
+            .and_then(|token| self.next_prefix_expression(token))
             .and_then(|left| self.next_infix_expression(precedence, left))
     }
 

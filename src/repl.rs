@@ -1,5 +1,5 @@
-use lexer::Lexer;
-use parser::Parser;
+use crate::lexer::Lexer;
+use crate::parser::Parser;
 use std::io::{BufRead, Write};
 
 const PROMPT: &str = ">>> ";
