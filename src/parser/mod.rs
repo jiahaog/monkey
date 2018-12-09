@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod error;
+mod expr_call;
 mod expr_func;
 mod expr_if;
 mod expr_prefix_infix;

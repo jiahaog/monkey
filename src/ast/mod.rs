@@ -63,7 +63,11 @@ pub enum Expression {
         params: Vec<Expression>,
         body: Vec<Statement>,
     },
-    // CallExpression,
+    Call {
+        // This should be of the Identifier or FunctionLiteral variant only
+        function: Box<Expression>,
+        arguments: Vec<Expression>,
+    },
     DummyExpression, // TODO remove me
 }
 
@@ -82,7 +86,18 @@ impl fmt::Display for Expression {
                 ref right,
             } => format!("({} {} {})", left, operator, right),
             Boolean(ref val) => val.to_string(),
-            _ => unimplemented!(),
+            Call {
+                ref function,
+                ref arguments,
+            } => format!("{}({})", function, {
+                let mut vec_str = arguments
+                    .iter()
+                    .fold(String::new(), |acc, x| format!("{}{}, ", acc, &x));
+                // remove the last ', ' from the string
+                vec_str.truncate(vec_str.len() - 2);
+                vec_str
+            }),
+            ref x => unimplemented!("Token: {:?}", x),
         };
         write!(f, "{}", string_val)
     }

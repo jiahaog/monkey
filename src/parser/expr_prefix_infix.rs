@@ -50,6 +50,7 @@ impl<'a> Parser<'a> {
             Token::NotEqual => self.parse_infix_expr(precedence, prev, Operator::NotEqual),
             Token::LessThan => self.parse_infix_expr(precedence, prev, Operator::LessThan),
             Token::GreaterThan => self.parse_infix_expr(precedence, prev, Operator::GreaterThan),
+            Token::LParen => self.parse_call_expression(prev),
             _ => unimplemented!(),
         }
     }
