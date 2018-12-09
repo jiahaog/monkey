@@ -11,7 +11,7 @@ mod tests;
 
 use self::error::{ParseError, ParseErrorExpected};
 use self::precedence::Precedence;
-use crate::ast::{Node, Statement};
+use crate::ast::{Program, Statement};
 use crate::lexer::Lexer;
 use crate::token::Token;
 use std::iter::Peekable;
@@ -27,7 +27,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(self) -> Result<Node, Vec<ParseError>> {
+    pub fn parse(self) -> Result<Program, Vec<ParseError>> {
         let (oks, fails): (Vec<_>, Vec<_>) = self.partition(Result::is_ok);
         let values = oks.into_iter().map(Result::unwrap).collect();
         let errors: Vec<_> = fails.into_iter().map(Result::unwrap_err).collect();
@@ -35,7 +35,7 @@ impl<'a> Parser<'a> {
         if errors.len() > 0 {
             Err(errors)
         } else {
-            Ok(Node::Program(values))
+            Ok(Program { statements: values })
         }
     }
 

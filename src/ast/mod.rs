@@ -9,10 +9,8 @@ use self::Statement::*;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
-pub enum Node {
-    Program(Vec<Statement>),
-    Expression,
-    Statement,
+pub struct Program {
+    pub statements: Vec<Statement>,
 }
 
 #[derive(PartialEq, Debug)]

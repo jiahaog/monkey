@@ -1,5 +1,5 @@
-use crate::ast::{Expression, Node, Operator, Statement};
-use crate::eval::eval;
+use crate::ast::{Expression, Operator, Statement};
+use crate::eval::Eval;
 use crate::lexer::Lexer;
 use crate::object::Object;
 use crate::parser::Parser;
@@ -19,7 +19,7 @@ fn test_eval(inp: &str, expected: Object) {
 
     let program = parser.parse().expect("No parse errors");
 
-    let received = eval(program);
+    let received = program.eval();
 
     assert_eq!(expected, received);
 }
