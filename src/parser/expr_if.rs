@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
                 received: None,
             })
             .and_then(|token| match token {
-                Token::LBrace => self.parse_block_statement(),
+                Token::LBrace => self.parse_block_statements(Vec::new()),
                 x => Err(ParseError {
                     expected: ParseErrorExpected::ParenthesisForIfCondition,
                     received: Some(x),
@@ -76,7 +76,7 @@ impl<'a> Parser<'a> {
                         received: None,
                     })
                     .and_then(|token| match token {
-                        Token::LBrace => self.parse_block_statement(),
+                        Token::LBrace => self.parse_block_statements(Vec::new()),
                         x => Err(ParseError {
                             expected: ParseErrorExpected::ParenthesisForIfCondition,
                             received: Some(x),

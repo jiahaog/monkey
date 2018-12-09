@@ -120,23 +120,24 @@ impl<'a> Parser<'a> {
         result
     }
 
-    fn parse_block_statement(&mut self) -> Result<Vec<Statement>, ParseError> {
-        let mut statements = Vec::new();
-
-        loop {
-            if let None = self.lexer.peek() {
-                return Ok(statements);
-            }
-
-            if let Some(Token::RBrace) = self.lexer.peek() {
+    fn parse_block_statements(
+        &mut self,
+        mut prev: Vec<Statement>,
+    ) -> Result<Vec<Statement>, ParseError> {
+        match self.lexer.peek() {
+            None => Ok(prev),
+            Some(Token::RBrace) => {
                 self.lexer.next();
-                return Ok(statements);
+                Ok(prev)
             }
-
-            match self.next_statement().unwrap() {
-                Ok(statement) => statements.push(statement),
-                Err(x) => return Err(x),
-            }
+            _ => match self.next_statement().unwrap() {
+                // can unwrap because next token is guaranteed to not be none
+                Ok(statement) => {
+                    prev.push(statement);
+                    self.parse_block_statements(prev)
+                }
+                Err(x) => Err(x),
+            },
         }
     }
 
