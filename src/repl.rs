@@ -1,4 +1,5 @@
 use lexer::Lexer;
+use parser::Parser;
 use std::io::{BufRead, Write};
 
 const PROMPT: &str = ">>> ";
@@ -27,4 +28,7 @@ where
         output.write(format!("{:?}", token).as_bytes()).unwrap();
         output.write(b"\n").unwrap();
     });
+
+    // TODO
+    let _ = Parser::new(Lexer::new(&s));
 }
