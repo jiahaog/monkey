@@ -57,7 +57,12 @@ pub enum Expression {
         consequence: Vec<Statement>,
         alternative: Vec<Statement>,
     },
-    // FunctionLiteral,
+    FunctionLiteral {
+        // This should be of the Identifier variant only
+        // https://github.com/rust-lang/rfcs/pull/2593
+        params: Vec<Expression>,
+        body: Vec<Statement>,
+    },
     // CallExpression,
     DummyExpression, // TODO remove me
 }

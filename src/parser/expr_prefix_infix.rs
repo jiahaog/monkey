@@ -82,6 +82,7 @@ impl<'a> Parser<'a> {
             Token::False => Ok(Expression::Boolean(false)),
             Token::LParen => self.parse_grouped_expression(),
             Token::If => self.parse_if_expression(),
+            Token::Function => self.parse_function_expression(),
             x => unimplemented!("Token: {:?}", x),
         }
     }

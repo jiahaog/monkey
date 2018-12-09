@@ -8,6 +8,9 @@ pub enum ParseErrorExpected {
     PrefixTokenOrExpression,
     ClosingParenthesis,
     ParenthesisForIfCondition,
+    ParenthesisForFunctionParams,
+    ParenthesisForFunctionBody,
+    ParameterForFunction,
 }
 
 #[derive(Debug, PartialEq)]

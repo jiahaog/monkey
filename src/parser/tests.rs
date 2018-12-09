@@ -345,6 +345,58 @@ fn test_if_expression() {
 }
 
 #[test]
+fn test_func_expression() {
+    let cases = vec![
+        (
+            "fn() { x + y; }",
+            vec![Statement::Expression(Expression::FunctionLiteral {
+                params: vec![],
+                body: vec![Statement::Expression(Expression::Infix {
+                    operator: Operator::Plus,
+                    left: Box::new(Expression::Identifier("x".to_string())),
+                    right: Box::new(Expression::Identifier("y".to_string())),
+                })],
+            })],
+        ),
+        (
+            "fn(x, y) { x + y; }",
+            vec![Statement::Expression(Expression::FunctionLiteral {
+                params: vec![
+                    Expression::Identifier("x".to_string()),
+                    Expression::Identifier("y".to_string()),
+                ],
+                body: vec![Statement::Expression(Expression::Infix {
+                    operator: Operator::Plus,
+                    left: Box::new(Expression::Identifier("x".to_string())),
+                    right: Box::new(Expression::Identifier("y".to_string())),
+                })],
+            })],
+        ),
+        (
+            "fn(x, y) { x + y; true; }",
+            vec![Statement::Expression(Expression::FunctionLiteral {
+                params: vec![
+                    Expression::Identifier("x".to_string()),
+                    Expression::Identifier("y".to_string()),
+                ],
+                body: vec![
+                    Statement::Expression(Expression::Infix {
+                        operator: Operator::Plus,
+                        left: Box::new(Expression::Identifier("x".to_string())),
+                        right: Box::new(Expression::Identifier("y".to_string())),
+                    }),
+                    Statement::Expression(Expression::Boolean(true)),
+                ],
+            })],
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_parser_success(inp, expected);
+    }
+}
+
+#[test]
 fn test_operator_precedence_expression() {
     let cases = vec![
         ("5 + 6 - 7;", "((5 + 6) - 7)"),
