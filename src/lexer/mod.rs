@@ -6,7 +6,6 @@ use std::str::Chars;
 mod tests;
 
 pub struct Lexer<'a> {
-    // TODO: is it necessary for this to be peekable?
     iter: Peekable<Chars<'a>>,
 }
 

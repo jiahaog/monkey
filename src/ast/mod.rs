@@ -40,7 +40,6 @@ impl fmt::Display for Operator {
 pub enum Expression {
     Identifier(String),
     IntegerLiteral(usize),
-    // TODO remove the `Expression` postfix in the names
     Prefix {
         operator: Operator,
         right: Box<Expression>,
@@ -50,7 +49,6 @@ pub enum Expression {
         left: Box<Expression>,
         right: Box<Expression>,
     },
-    // TODO
     Boolean(bool),
     If {
         condition: Box<Expression>,

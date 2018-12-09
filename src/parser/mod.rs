@@ -17,7 +17,6 @@ use crate::token::Token;
 use std::iter::Peekable;
 
 pub struct Parser<'a> {
-    // TODO remove the peekable type if it's really unnecessary
     lexer: Peekable<Lexer<'a>>,
 }
 
