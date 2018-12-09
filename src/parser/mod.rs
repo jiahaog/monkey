@@ -11,7 +11,7 @@ mod tests;
 
 use self::error::{ParseError, ParseErrorExpected};
 use self::precedence::Precedence;
-use crate::ast::{Expression, Program, Statement};
+use crate::ast::{Program, Statement};
 use crate::lexer::Lexer;
 use crate::token::Token;
 use std::iter::Peekable;
@@ -41,7 +41,7 @@ impl<'a> Parser<'a> {
     }
 
     fn next_statement(&mut self) -> Option<Result<Statement, ParseError>> {
-        match self.lexer.peek() {
+        (match self.lexer.peek() {
             None => None,
             Some(Token::Let) => {
                 self.lexer.next();
@@ -52,24 +52,28 @@ impl<'a> Parser<'a> {
                 Some(self.next_return_statement())
             }
             _ => Some(self.next_expression_statement()),
-        }
+        })
+        .map(|result| {
+            result.map_err(|err| {
+                // Increment the iterator until the semicolon, so that the next call to next_statement will continue with the next line
+                self.skip_tokens();
+                err
+            })
+        })
     }
 
     fn next_let_statement(&mut self) -> Result<Statement, ParseError> {
         self.next_let_statement_identifier()
             .and_then(|name| self.next_let_statement_assign().map(|_| name))
-            .map_err(|err| {
-                // Increment the iterator until the semicolon, so that the next call to
-                // next_let_statement will continue with the next line.
-                // We do this before the success case, because we don't want to call
-                // next_expression() twice
-
-                let _ = self.next_expression_dummy();
-                err
-            })
             .and_then(|name| {
-                self.next_expression_dummy()
-                    .map(|expression| Statement::Let(name, expression))
+                let result = self
+                    .next_expression(Precedence::Lowest)
+                    .map(|expression| Statement::Let(name, expression));
+
+                if let Some(Token::Semicolon) = self.lexer.peek() {
+                    self.lexer.next();
+                }
+                result
             })
     }
 
@@ -106,7 +110,15 @@ impl<'a> Parser<'a> {
     }
 
     fn next_return_statement(&mut self) -> Result<Statement, ParseError> {
-        self.next_expression_dummy().map(|x| Statement::Return(x))
+        let result = self
+            .next_expression(Precedence::Lowest)
+            .map(|x| Statement::Return(x));
+
+        if let Some(Token::Semicolon) = self.lexer.peek() {
+            self.lexer.next();
+        }
+
+        result
     }
 
     fn next_expression_statement(&mut self) -> Result<Statement, ParseError> {
@@ -142,20 +154,15 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn next_expression_dummy(&mut self) -> Result<Expression, ParseError> {
-        // TODO temporary hack to chomp up stuff until the semicolon to make
-        // tests pass
-        loop {
-            let current = self.lexer.next();
-            if let Some(token) = current {
-                if let Token::Semicolon = token {
-                    break;
-                }
-            } else {
-                break;
+    // Attempts to skip tokens until a semicolon, which is useful in case we want to proceed to
+    // parse the next statement even when there are errors
+    fn skip_tokens(&mut self) {
+        match self.lexer.next() {
+            Some(Token::Semicolon) | None => (),
+            _ => {
+                self.skip_tokens();
             }
-        }
-        Ok(Expression::DummyExpression)
+        };
     }
 }
 

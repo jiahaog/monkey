@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Expression::DummyExpression, Operator, Statement};
+use crate::ast::{Expression, Operator, Statement};
 use crate::lexer::Lexer;
 use crate::parser::{ParseError, ParseErrorExpected, Parser};
 use crate::token::Token;
@@ -6,15 +6,13 @@ use crate::token::Token;
 #[test]
 fn test_let_statements() {
     let inp = "let x = 5;
-    let y = 10;
-    let foobar = 838383;";
+    let y = 10;";
 
     test_parser_success(
         inp,
         vec![
-            Statement::Let("x".to_string(), DummyExpression),
-            Statement::Let("y".to_string(), DummyExpression),
-            Statement::Let("foobar".to_string(), DummyExpression),
+            Statement::Let("x".to_string(), Expression::IntegerLiteral(5)),
+            Statement::Let("y".to_string(), Expression::IntegerLiteral(10)),
         ],
     );
 }
@@ -27,8 +25,8 @@ fn test_return_statements() {
     test_parser_success(
         inp,
         vec![
-            Statement::Return(DummyExpression),
-            Statement::Return(DummyExpression),
+            Statement::Return(Expression::IntegerLiteral(5)),
+            Statement::Return(Expression::IntegerLiteral(10)),
         ],
     );
 }

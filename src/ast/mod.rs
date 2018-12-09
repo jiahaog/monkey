@@ -68,7 +68,6 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Vec<Expression>,
     },
-    DummyExpression, // TODO remove me
 }
 
 impl fmt::Display for Expression {
