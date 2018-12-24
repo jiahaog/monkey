@@ -4,12 +4,13 @@ use crate::object::Object;
 #[cfg(test)]
 mod tests;
 
-trait Eval {
+pub trait Eval {
     fn eval(&self) -> Object;
 }
 
 impl Eval for Program {
     fn eval(&self) -> Object {
+        // TODO this only evaluates the first statement
         self.statements[0].eval()
     }
 }

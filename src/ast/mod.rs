@@ -8,6 +8,7 @@ use self::Operator::*;
 use self::Statement::*;
 use std::fmt::{Display, Formatter};
 
+// TODO maybe we can just go with the raw Vec
 #[derive(Debug)]
 pub struct Program {
     pub statements: Vec<Statement>,
