@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Statement};
+use crate::ast::{Expression, Statements};
 use crate::parser::Parser;
 use crate::parser::{ParseError, ParseErrorExpected};
 use crate::token::Token;
@@ -63,7 +63,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_function_body(&mut self) -> Result<Vec<Statement>, ParseError> {
+    fn parse_function_body(&mut self) -> Result<Statements, ParseError> {
         self.lexer
             .next()
             .ok_or(ParseError {

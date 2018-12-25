@@ -8,10 +8,12 @@ use self::Operator::*;
 use self::Statement::*;
 use std::fmt::{Display, Formatter};
 
+pub type Statements = Vec<Statement>;
+
 // TODO maybe we can just go with the raw Vec
 #[derive(Debug)]
 pub struct Program {
-    pub statements: Vec<Statement>,
+    pub statements: Statements,
 }
 
 #[derive(PartialEq, Debug)]
@@ -60,14 +62,14 @@ pub enum Expression {
     Boolean(bool),
     If {
         condition: Box<Expression>,
-        consequence: Vec<Statement>,
-        alternative: Vec<Statement>,
+        consequence: Statements,
+        alternative: Statements,
     },
     FunctionLiteral {
         // This should be of the Identifier variant only
         // https://github.com/rust-lang/rfcs/pull/2593
         params: Vec<Expression>,
-        body: Vec<Statement>,
+        body: Statements,
     },
     Call {
         // This should be of the Identifier or FunctionLiteral variant only

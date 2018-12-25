@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Statement};
+use crate::ast::{Expression, Statements};
 use crate::parser::Parser;
 use crate::parser::Precedence;
 use crate::parser::{ParseError, ParseErrorExpected};
@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn parse_if_expression_consequence(&mut self) -> Result<Vec<Statement>, ParseError> {
+    fn parse_if_expression_consequence(&mut self) -> Result<Statements, ParseError> {
         self.lexer
             .next()
             .ok_or(ParseError {
@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn parse_if_expression_alternative(&mut self) -> Result<Vec<Statement>, ParseError> {
+    fn parse_if_expression_alternative(&mut self) -> Result<Statements, ParseError> {
         match self.lexer.peek() {
             Some(Token::Else) => {
                 self.lexer.next(); // consume the else

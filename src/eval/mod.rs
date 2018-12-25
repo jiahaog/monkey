@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Operator, Program, Statement};
+use crate::ast::{Expression, Operator, Program, Statement, Statements};
 use crate::object::Object;
 
 #[cfg(test)]
@@ -10,8 +10,7 @@ pub trait Eval {
 
 impl Eval for Program {
     fn eval(&self) -> Object {
-        // TODO this only evaluates the first statement
-        self.statements[0].eval()
+        self.statements.eval()
     }
 }
 
@@ -25,7 +24,7 @@ impl Eval for Statement {
     }
 }
 
-impl Eval for Vec<Statement> {
+impl Eval for Statements {
     fn eval(&self) -> Object {
         self.iter()
             .fold(Object::Null, |_acc, statement| statement.eval())
@@ -92,8 +91,8 @@ fn eval_infix_expr(operator: &Operator, left: &Object, right: &Object) -> Object
 
 fn eval_if_expr(
     condition: &Box<Expression>,
-    consequence: &Vec<Statement>,
-    alternative: &Vec<Statement>,
+    consequence: &Statements,
+    alternative: &Statements,
 ) -> Object {
     if condition.eval().is_truthy() {
         consequence.eval()

@@ -11,7 +11,7 @@ mod tests;
 
 use self::error::{ParseError, ParseErrorExpected};
 use self::precedence::Precedence;
-use crate::ast::{Program, Statement};
+use crate::ast::{Program, Statement, Statements};
 use crate::lexer::Lexer;
 use crate::token::Token;
 use std::iter::Peekable;
@@ -132,10 +132,7 @@ impl<'a> Parser<'a> {
         result
     }
 
-    fn parse_block_statements(
-        &mut self,
-        mut prev: Vec<Statement>,
-    ) -> Result<Vec<Statement>, ParseError> {
+    fn parse_block_statements(&mut self, mut prev: Statements) -> Result<Statements, ParseError> {
         match self.lexer.peek() {
             None => Ok(prev),
             Some(Token::RBrace) => {

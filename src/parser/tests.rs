@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Operator, Statement};
+use crate::ast::{Expression, Operator, Statement, Statements};
 use crate::lexer::Lexer;
 use crate::parser::{ParseError, ParseErrorExpected, Parser};
 use crate::token::Token;
@@ -439,7 +439,7 @@ fn test_boolean_expression() {
     );
 }
 
-fn test_parser_success(inp: &str, expected: Vec<Statement>) {
+fn test_parser_success(inp: &str, expected: Statements) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
