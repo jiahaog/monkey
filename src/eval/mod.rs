@@ -25,6 +25,13 @@ impl Eval for Statement {
     }
 }
 
+impl Eval for Vec<Statement> {
+    fn eval(&self) -> Object {
+        self.iter()
+            .fold(Object::Null, |_acc, statement| statement.eval())
+    }
+}
+
 impl Eval for Expression {
     fn eval(&self) -> Object {
         // TODO there are some unimplemented cases here
@@ -38,6 +45,11 @@ impl Eval for Expression {
                 left,
                 right,
             } => eval_infix_expr(operator, &left.eval(), &right.eval()),
+            Expression::If {
+                condition,
+                consequence,
+                alternative,
+            } => eval_if_expr(condition, consequence, alternative),
             x => unimplemented!("{:?}", x),
         }
     }
@@ -75,5 +87,17 @@ fn eval_infix_expr(operator: &Operator, left: &Object, right: &Object) -> Object
         (Operator::NotEqual, left_val, right_val) => Object::from_bool_val(left_val != right_val),
         // TODO return result instead of panicking on unsupported ops
         x => unimplemented!("{:?}", x),
+    }
+}
+
+fn eval_if_expr(
+    condition: &Box<Expression>,
+    consequence: &Vec<Statement>,
+    alternative: &Vec<Statement>,
+) -> Object {
+    if condition.eval().is_truthy() {
+        consequence.eval()
+    } else {
+        alternative.eval()
     }
 }

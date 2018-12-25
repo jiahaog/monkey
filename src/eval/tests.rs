@@ -81,6 +81,23 @@ fn test_eval_integer_expr() {
     }
 }
 
+#[test]
+fn test_eval_if_else_expr() {
+    let cases = vec![
+        ("if (true) { 10 }", Object::Integer(10)),
+        ("if (false) { 10 }", Object::Null),
+        ("if (1) { 10 }", Object::Integer(10)),
+        ("if (1 < 2) { 10 }", Object::Integer(10)),
+        ("if (1 > 2) { 10 }", Object::Null),
+        ("if (1 > 2) { 10 } else { 20 }", Object::Integer(20)),
+        ("if (1 < 2) { 10 } else { 20 }", Object::Integer(10)),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
+
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
