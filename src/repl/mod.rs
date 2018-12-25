@@ -1,4 +1,3 @@
-use crate::eval::Eval;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use std::io::{BufRead, Write};
@@ -28,7 +27,7 @@ where
     // TODO cleanup output
     match Parser::new(Lexer::new(&s)).parse() {
         Ok(program) => {
-            let result = program.eval();
+            let result = program.evaluate();
             output.write(format!("{:?}\n", result).as_bytes())
         }
         Err(e) => output.write(format!("{:?}\n", e).as_bytes()),

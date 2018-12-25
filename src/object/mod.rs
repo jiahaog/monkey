@@ -7,7 +7,7 @@ pub enum Object {
 
 const TRUE: Object = Object::Boolean(true);
 const FALSE: Object = Object::Boolean(false);
-const NULL: Object = Object::Null;
+pub const NULL: Object = Object::Null;
 
 impl Object {
     pub fn from_bool_val(val: bool) -> Self {

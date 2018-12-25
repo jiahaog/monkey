@@ -1,20 +1,11 @@
 use self::EvalResult::*;
 use crate::ast::{Expression, Operator, Program, Statement, Statements};
-use crate::object::Object;
+use crate::object::{Object, NULL};
 
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug)]
-pub enum EvalResult {
-    Raw(Object),
-    Return(Object),
-    RuntimeError(Error),
-}
-
-pub trait Eval {
-    fn eval(&self) -> EvalResult;
-}
+type Result = std::result::Result<Object, Error>;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -27,6 +18,28 @@ pub enum Error {
         operator: Operator,
         right: Object,
     },
+}
+
+impl Program {
+    pub fn evaluate(&self) -> Result {
+        match self.eval() {
+            Return(object) => Ok(object),
+            Raw(object) => Ok(object),
+            RuntimeError(err) => Err(err),
+        }
+    }
+}
+
+trait Eval {
+    fn eval(&self) -> EvalResult;
+}
+
+// Internal evaluation result for short circuit of return statements and errors
+#[derive(Debug)]
+enum EvalResult {
+    Raw(Object),
+    Return(Object),
+    RuntimeError(Error),
 }
 
 impl Eval for Program {
@@ -55,12 +68,11 @@ impl Eval for Statement {
 impl Eval for Statements {
     fn eval(&self) -> EvalResult {
         // short circuit fold (kinda inefficient)
-        self.iter()
-            .fold(Raw(Object::Null), |acc, statement| match acc {
-                Return(_) => acc,
-                RuntimeError(_) => acc,
-                _ => statement.eval(),
-            })
+        self.iter().fold(Raw(NULL), |acc, statement| match acc {
+            Return(_) => acc,
+            RuntimeError(_) => acc,
+            _ => statement.eval(),
+        })
     }
 }
 
