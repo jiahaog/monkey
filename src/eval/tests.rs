@@ -1,4 +1,3 @@
-use crate::ast::{Expression, Operator, Statement};
 use crate::eval::Eval;
 use crate::lexer::Lexer;
 use crate::object::Object;
@@ -131,7 +130,8 @@ fn test_eval(inp: &str, expected: Object) {
 
     let program = parser.parse().expect("No parse errors");
 
-    let received = program.eval();
-
-    assert_eq!(expected, received);
+    match program.eval() {
+        Ok(received) => assert_eq!(expected, received),
+        Err(x) => panic!("Error {:?} was not expected", x),
+    }
 }
