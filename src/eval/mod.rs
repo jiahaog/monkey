@@ -10,7 +10,11 @@ pub trait Eval {
 
 impl Eval for Program {
     fn eval(&self) -> Object {
-        self.statements.eval()
+        // Unwrap return statements
+        match self.statements.eval() {
+            Object::Return(x) => *x,
+            x => x,
+        }
     }
 }
 
@@ -27,15 +31,10 @@ impl Eval for Statement {
 impl Eval for Statements {
     fn eval(&self) -> Object {
         // short circuit fold (kinda inefficient)
-        let wrapped_return = self.iter().fold(Object::Null, |acc, statement| match acc {
+        self.iter().fold(Object::Null, |acc, statement| match acc {
             Object::Return(_) => acc,
             _ => statement.eval(),
-        });
-
-        match wrapped_return {
-            Object::Return(x) => *x,
-            x => x,
-        }
+        })
     }
 }
 

@@ -106,19 +106,18 @@ fn test_eval_return_expr() {
         ("return 2 * 5; 9;", Object::Integer(10)),
         ("9; return 2 * 5; 9;", Object::Integer(10)),
         ("if (10 > 1) { return 10; }", Object::Integer(10)),
-        // TODO fixme
-        // (
-        //     "
-        //     if (10 > 1) {
-        //         if (10 > 1) {
-        //             return 10;
-        //         }
+        (
+            "
+            if (10 > 1) {
+                if (10 > 1) {
+                    return 10;
+                }
 
-        //         return 1;
-        //     }
-        //    ",
-        //     Object::Integer(10),
-        // ),
+                return 1;
+            }
+           ",
+            Object::Integer(10),
+        ),
     ];
 
     for (inp, expected) in cases {
