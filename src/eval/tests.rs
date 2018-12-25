@@ -98,6 +98,34 @@ fn test_eval_if_else_expr() {
     }
 }
 
+#[test]
+fn test_eval_return_expr() {
+    let cases = vec![
+        ("return 10;", Object::Integer(10)),
+        ("return 10; 9;", Object::Integer(10)),
+        ("return 2 * 5; 9;", Object::Integer(10)),
+        ("9; return 2 * 5; 9;", Object::Integer(10)),
+        ("if (10 > 1) { return 10; }", Object::Integer(10)),
+        // TODO fixme
+        // (
+        //     "
+        //     if (10 > 1) {
+        //         if (10 > 1) {
+        //             return 10;
+        //         }
+
+        //         return 1;
+        //     }
+        //    ",
+        //     Object::Integer(10),
+        // ),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
+
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);

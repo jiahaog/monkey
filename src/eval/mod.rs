@@ -19,15 +19,23 @@ impl Eval for Statement {
         match self {
             Statement::Let(identifier, expr) => unimplemented!(),
             Statement::Expression(expr) => expr.eval(),
-            _ => unimplemented!(),
+            Statement::Return(expr) => Object::Return(Box::new(expr.eval())),
         }
     }
 }
 
 impl Eval for Statements {
     fn eval(&self) -> Object {
-        self.iter()
-            .fold(Object::Null, |_acc, statement| statement.eval())
+        // short circuit fold (kinda inefficient)
+        let wrapped_return = self.iter().fold(Object::Null, |acc, statement| match acc {
+            Object::Return(_) => acc,
+            _ => statement.eval(),
+        });
+
+        match wrapped_return {
+            Object::Return(x) => *x,
+            x => x,
+        }
     }
 }
 

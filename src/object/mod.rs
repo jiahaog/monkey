@@ -3,6 +3,9 @@ pub enum Object {
     Null,
     Boolean(bool),
     Integer(isize),
+    // Marker for the evaluator to stop evaluating subsequent statements. Should not be
+    // recursive
+    Return(Box<Object>),
 }
 
 const TRUE: Object = Object::Boolean(true);
