@@ -10,13 +10,23 @@ pub trait Eval {
     fn eval(&self) -> Result;
 }
 
-#[derive(Debug)]
-pub enum Error {}
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    TypeMismatch {
+        operator: Operator,
+        left: Object,
+        right: Object,
+    },
+    UnknownOperation {
+        operator: Operator,
+        right: Object,
+    },
+}
 
 impl Eval for Program {
     fn eval(&self) -> Result {
-        // Unwrap return statements
         match self.statements.eval() {
+            // Unwrap return statement
             Ok(Object::Return(x)) => Ok(*x),
             x => x,
         }
@@ -52,12 +62,12 @@ impl Eval for Expression {
             // TODO check if this is safe
             Expression::IntegerLiteral(val) => Ok(Object::Integer(*val as isize)),
             Expression::Boolean(val) => Ok(Object::from_bool_val(*val)),
-            Expression::Prefix { operator, right } => eval_prefix_expr(operator, right.eval()),
+            Expression::Prefix { operator, right } => eval_prefix_expr(*operator, right.eval()),
             Expression::Infix {
                 operator,
                 left,
                 right,
-            } => eval_infix_expr(operator, left.eval(), right.eval()),
+            } => eval_infix_expr(*operator, left.eval(), right.eval()),
             Expression::If {
                 condition,
                 consequence,
@@ -68,7 +78,7 @@ impl Eval for Expression {
     }
 }
 
-fn eval_prefix_expr(operator: &Operator, right: Result) -> Result {
+fn eval_prefix_expr(operator: Operator, right: Result) -> Result {
     if let Err(_) = right {
         return right;
     }
@@ -77,12 +87,14 @@ fn eval_prefix_expr(operator: &Operator, right: Result) -> Result {
         (Operator::Not, Object::Boolean(false)) => Ok(Object::from_bool_val(true)),
         (Operator::Not, Object::Integer(_)) => Ok(Object::from_bool_val(false)),
         (Operator::Minus, Object::Integer(val)) => Ok(Object::Integer(-val)),
-        // TODO return result instead of panicking on unsupported ops
-        x => unimplemented!("{:?}", x),
+        (operator, right) => Err(Error::UnknownOperation {
+            operator: operator,
+            right: right,
+        }),
     }
 }
 
-fn eval_infix_expr(operator: &Operator, left: Result, right: Result) -> Result {
+fn eval_infix_expr(operator: Operator, left: Result, right: Result) -> Result {
     match (&left, &right) {
         (Err(_), _) => return left,
         (_, Err(_)) => return right,
@@ -113,8 +125,11 @@ fn eval_infix_expr(operator: &Operator, left: Result, right: Result) -> Result {
         (Operator::NotEqual, left_val, right_val) => {
             Ok(Object::from_bool_val(left_val != right_val))
         }
-        // TODO return result instead of panicking on unsupported ops
-        x => unimplemented!("{:?}", x),
+        (operator, left, right) => Err(Error::TypeMismatch {
+            operator: operator,
+            left: left,
+            right: right,
+        }),
     }
 }
 

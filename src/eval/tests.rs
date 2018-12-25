@@ -1,4 +1,5 @@
-use crate::eval::Eval;
+use crate::ast::Operator;
+use crate::eval::{Error, Eval};
 use crate::lexer::Lexer;
 use crate::object::Object;
 use crate::parser::Parser;
@@ -124,6 +125,79 @@ fn test_eval_return_expr() {
     }
 }
 
+#[test]
+fn test_error_expr() {
+    let cases = vec![
+        (
+            "5 + true;",
+            Error::TypeMismatch {
+                operator: Operator::Plus,
+                left: Object::Integer(5),
+                right: Object::Boolean(true),
+            },
+        ),
+        (
+            "5 + true; 5;",
+            Error::TypeMismatch {
+                operator: Operator::Plus,
+                left: Object::Integer(5),
+                right: Object::Boolean(true),
+            },
+        ),
+        (
+            "-true;",
+            Error::UnknownOperation {
+                operator: Operator::Minus,
+                right: Object::Boolean(true),
+            },
+        ),
+        (
+            "true + false;",
+            Error::TypeMismatch {
+                operator: Operator::Plus,
+                left: Object::Boolean(true),
+                right: Object::Boolean(false),
+            },
+        ),
+        (
+            "5; true + false; 5;",
+            Error::TypeMismatch {
+                operator: Operator::Plus,
+                left: Object::Boolean(true),
+                right: Object::Boolean(false),
+            },
+        ),
+        (
+            "if (10 > 1) { true + false; }",
+            Error::TypeMismatch {
+                operator: Operator::Plus,
+                left: Object::Boolean(true),
+                right: Object::Boolean(false),
+            },
+        ),
+        (
+            "
+            if (10 > 1) {
+                if (10 > 1) {
+                    return true + false;
+                }
+
+                return 1;
+            }
+           ",
+            Error::TypeMismatch {
+                operator: Operator::Plus,
+                left: Object::Boolean(true),
+                right: Object::Boolean(false),
+            },
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval_error(inp, expected);
+    }
+}
+
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
@@ -133,5 +207,20 @@ fn test_eval(inp: &str, expected: Object) {
     match program.eval() {
         Ok(received) => assert_eq!(expected, received),
         Err(x) => panic!("Error {:?} was not expected", x),
+    }
+}
+
+fn test_eval_error(inp: &str, expected: Error) {
+    let lexer = Lexer::new(inp);
+    let parser = Parser::new(lexer);
+
+    let program = parser.parse().expect("No parse errors");
+
+    match program.eval() {
+        Ok(received) => panic!(
+            "Expected error {:?}, received result {:?}",
+            expected, received
+        ),
+        Err(received) => assert_eq!(expected, received),
     }
 }

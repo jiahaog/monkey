@@ -16,7 +16,7 @@ pub struct Program {
     pub statements: Statements,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Operator {
     Plus,
     Minus,
