@@ -189,6 +189,13 @@ fn test_prefix_expressions_error() {
                 received: None,
             }],
         ),
+        (
+            "let a = return 1",
+            vec![ParseError {
+                expected: ParseErrorExpected::PrefixTokenOrExpression,
+                received: Some(Token::Return),
+            }],
+        ),
     ];
 
     for (inp, expected) in cases {

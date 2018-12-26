@@ -84,6 +84,10 @@ impl<'a> Parser<'a> {
             Token::LParen => self.parse_grouped_expression(),
             Token::If => self.parse_if_expression(),
             Token::Function => self.parse_function_expression(),
+            Token::Return => Err(ParseError {
+                expected: ParseErrorExpected::PrefixTokenOrExpression,
+                received: Some(Token::Return),
+            }),
             x => unimplemented!("Token: {:?}", x),
         }
     }

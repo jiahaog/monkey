@@ -1,4 +1,4 @@
-#[derive(PartialEq, Debug, PartialOrd)]
+#[derive(PartialEq, Debug, PartialOrd, Copy, Clone)]
 pub enum Object {
     Null,
     Boolean(bool),

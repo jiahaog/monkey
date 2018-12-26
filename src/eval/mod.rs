@@ -1,6 +1,7 @@
 use self::EvalResult::*;
 use crate::ast::{Expression, Operator, Program, Statement, Statements};
 use crate::object::{Object, NULL};
+use std::collections::HashMap;
 
 #[cfg(test)]
 mod tests;
@@ -18,11 +19,16 @@ pub enum Error {
         operator: Operator,
         right: Object,
     },
+    IdentifierNotFound {
+        name: String,
+    },
 }
 
 impl Program {
     pub fn evaluate(&self) -> Result {
-        match self.eval() {
+        let mut env = Env::new();
+
+        match self.eval(&mut env) {
             Return(object) => Ok(object),
             Raw(object) => Ok(object),
             RuntimeError(err) => Err(err),
@@ -30,8 +36,29 @@ impl Program {
     }
 }
 
+struct Env {
+    store: HashMap<String, Object>,
+}
+
+impl Env {
+    fn new() -> Self {
+        Env {
+            store: HashMap::new(),
+        }
+    }
+
+    fn get(&self, name: &String) -> Option<&Object> {
+        // We will have more problems if our Object struct doesn't implement copy
+        self.store.get(name)
+    }
+
+    fn set(&mut self, name: String, val: Object) {
+        self.store.insert(name, val);
+    }
+}
+
 trait Eval {
-    fn eval(&self) -> EvalResult;
+    fn eval(&self, env: &mut Env) -> EvalResult;
 }
 
 // Internal evaluation result for short circuit of return statements and errors
@@ -43,8 +70,8 @@ enum EvalResult {
 }
 
 impl Eval for Program {
-    fn eval(&self) -> EvalResult {
-        match self.statements.eval() {
+    fn eval(&self, env: &mut Env) -> EvalResult {
+        match self.statements.eval(env) {
             // Unwrap return statement
             Return(x) => Raw(x),
             x => x,
@@ -53,11 +80,20 @@ impl Eval for Program {
 }
 
 impl Eval for Statement {
-    fn eval(&self) -> EvalResult {
+    fn eval(&self, env: &mut Env) -> EvalResult {
         match self {
-            Statement::Let(_identifier, _expr) => unimplemented!(),
-            Statement::Expression(expr) => expr.eval(),
-            Statement::Return(expr) => match expr.eval() {
+            Statement::Let(identifier, expr) => match expr.eval(env) {
+                RuntimeError(err) => RuntimeError(err),
+                Raw(result) => {
+                    env.set(identifier.to_string(), result);
+                    Raw(NULL)
+                }
+                Return(_) => panic!(
+                    "Return not allowed here: This should have been disallowed by the parser"
+                ),
+            },
+            Statement::Expression(expr) => expr.eval(env),
+            Statement::Return(expr) => match expr.eval(env) {
                 Raw(x) => Return(x),
                 x => x,
             },
@@ -66,34 +102,40 @@ impl Eval for Statement {
 }
 
 impl Eval for Statements {
-    fn eval(&self) -> EvalResult {
+    fn eval(&self, env: &mut Env) -> EvalResult {
         // short circuit fold (kinda inefficient)
         self.iter().fold(Raw(NULL), |acc, statement| match acc {
             Return(_) => acc,
             RuntimeError(_) => acc,
-            _ => statement.eval(),
+            _ => statement.eval(env),
         })
     }
 }
 
 impl Eval for Expression {
-    fn eval(&self) -> EvalResult {
+    fn eval(&self, env: &mut Env) -> EvalResult {
         // TODO there are some unimplemented cases here
         match self {
+            Expression::Identifier(name) => match env.get(name) {
+                Some(&val) => Raw(val),
+                None => RuntimeError(Error::IdentifierNotFound {
+                    name: name.to_string(),
+                }),
+            },
             // TODO check if this is safe
             Expression::IntegerLiteral(val) => Raw(Object::Integer(*val as isize)),
             Expression::Boolean(val) => Raw(Object::from_bool_val(*val)),
-            Expression::Prefix { operator, right } => eval_prefix_expr(*operator, right.eval()),
+            Expression::Prefix { operator, right } => eval_prefix_expr(*operator, right.eval(env)),
             Expression::Infix {
                 operator,
                 left,
                 right,
-            } => eval_infix_expr(*operator, left.eval(), right.eval()),
+            } => eval_infix_expr(*operator, left.eval(env), right.eval(env)),
             Expression::If {
                 condition,
                 consequence,
                 alternative,
-            } => eval_if_expr(condition, consequence, alternative),
+            } => eval_if_expr(env, condition, consequence, alternative),
             x => unimplemented!("{:?}", x),
         }
     }
@@ -154,16 +196,17 @@ fn eval_infix_expr(operator: Operator, left: EvalResult, right: EvalResult) -> E
 }
 
 fn eval_if_expr(
+    env: &mut Env,
     condition: &Box<Expression>,
     consequence: &Statements,
     alternative: &Statements,
 ) -> EvalResult {
-    match condition.eval() {
+    match condition.eval(env) {
         Raw(x) => {
             if x.is_truthy() {
-                consequence.eval()
+                consequence.eval(env)
             } else {
-                alternative.eval()
+                alternative.eval(env)
             }
         }
         x => x,

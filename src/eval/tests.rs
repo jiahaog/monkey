@@ -198,6 +198,37 @@ fn test_error_expr() {
     }
 }
 
+#[test]
+fn test_let_expr() {
+    let cases = vec![
+        ("let a = 5; a;", Object::Integer(5)),
+        ("let a = 5 * 5; a;", Object::Integer(25)),
+        ("let a = 5; let b = a; b;", Object::Integer(5)),
+        (
+            "let a = 5; let b = a; let c = a + b + 5; c;",
+            Object::Integer(15),
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
+
+#[test]
+fn test_let_expr_error() {
+    let cases = vec![(
+        "foobar;",
+        Error::IdentifierNotFound {
+            name: "foobar".to_string(),
+        },
+    )];
+
+    for (inp, expected) in cases {
+        test_eval_error(inp, expected);
+    }
+}
+
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
