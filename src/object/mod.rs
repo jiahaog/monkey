@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(PartialEq, Debug, PartialOrd, Copy, Clone)]
 pub enum Object {
     Null,
@@ -21,5 +23,28 @@ impl Object {
             Object::Boolean(false) | Object::Null => false,
             _ => true,
         }
+    }
+}
+
+// Environment for doing ast evaluations. Perhaps it might be better if we move this to another
+// module
+pub struct Env {
+    store: HashMap<String, Object>,
+}
+
+impl Env {
+    pub fn new() -> Self {
+        Env {
+            store: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, name: &String) -> Option<&Object> {
+        // We will have more problems if our Object struct doesn't implement copy
+        self.store.get(name)
+    }
+
+    pub fn set(&mut self, name: String, val: Object) {
+        self.store.insert(name, val);
     }
 }

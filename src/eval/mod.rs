@@ -1,7 +1,6 @@
 use self::EvalResult::*;
 use crate::ast::{Expression, Operator, Program, Statement, Statements};
-use crate::object::{Object, NULL};
-use std::collections::HashMap;
+use crate::object::{Env, Object, NULL};
 
 #[cfg(test)]
 mod tests;
@@ -25,35 +24,12 @@ pub enum Error {
 }
 
 impl Program {
-    pub fn evaluate(&self) -> Result {
-        let mut env = Env::new();
-
-        match self.eval(&mut env) {
+    pub fn evaluate(&self, env: &mut Env) -> Result {
+        match self.eval(env) {
             Return(object) => Ok(object),
             Raw(object) => Ok(object),
             RuntimeError(err) => Err(err),
         }
-    }
-}
-
-struct Env {
-    store: HashMap<String, Object>,
-}
-
-impl Env {
-    fn new() -> Self {
-        Env {
-            store: HashMap::new(),
-        }
-    }
-
-    fn get(&self, name: &String) -> Option<&Object> {
-        // We will have more problems if our Object struct doesn't implement copy
-        self.store.get(name)
-    }
-
-    fn set(&mut self, name: String, val: Object) {
-        self.store.insert(name, val);
     }
 }
 
