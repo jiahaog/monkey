@@ -24,8 +24,10 @@ pub enum Error {
 }
 
 impl Program {
-    pub fn evaluate(&self, env: &mut Env) -> Result {
-        match self.eval(env) {
+    pub fn evaluate(&self, env: Env) -> Result {
+        let (_, result) = self.eval(env);
+
+        match result {
             Return(object) => Ok(object),
             Raw(object) => Ok(object),
             RuntimeError(err) => Err(err),
@@ -34,7 +36,7 @@ impl Program {
 }
 
 trait Eval {
-    fn eval(&self, env: &mut Env) -> EvalResult;
+    fn eval(&self, env: Env) -> (Env, EvalResult);
 }
 
 // Internal evaluation result for short circuit of return statements and errors
@@ -46,67 +48,96 @@ enum EvalResult {
 }
 
 impl Eval for Program {
-    fn eval(&self, env: &mut Env) -> EvalResult {
-        match self.statements.eval(env) {
-            // Unwrap return statement
-            Return(x) => Raw(x),
-            x => x,
-        }
+    fn eval(&self, env: Env) -> (Env, EvalResult) {
+        let (new_env, result) = self.statements.eval(env);
+
+        (
+            new_env,
+            match result {
+                // Unwrap return statement
+                Return(x) => Raw(x),
+                x => x,
+            },
+        )
     }
 }
 
 impl Eval for Statement {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval(&self, env: Env) -> (Env, EvalResult) {
         match self {
-            Statement::Let(identifier, expr) => match expr.eval(env) {
-                RuntimeError(err) => RuntimeError(err),
-                Raw(result) => {
-                    env.set(identifier.to_string(), result);
-                    Raw(NULL)
+            Statement::Let(identifier, expr) => {
+                let (mut new_env, result) = expr.eval(env);
+                match result {
+                    RuntimeError(err) => (new_env, RuntimeError(err)),
+                    Raw(result) => {
+                        new_env.set(identifier.to_string(), result);
+                        (new_env, Raw(NULL))
+                    }
+                    Return(_) => panic!(
+                        "Return not allowed here: This should have been disallowed by the parser"
+                    ),
                 }
-                Return(_) => panic!(
-                    "Return not allowed here: This should have been disallowed by the parser"
-                ),
-            },
+            }
             Statement::Expression(expr) => expr.eval(env),
-            Statement::Return(expr) => match expr.eval(env) {
-                Raw(x) => Return(x),
-                x => x,
-            },
+            Statement::Return(expr) => {
+                let (new_env, result) = expr.eval(env);
+                (
+                    new_env,
+                    match result {
+                        Raw(x) => Return(x),
+                        x => x,
+                    },
+                )
+            }
         }
     }
 }
 
 impl Eval for Statements {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval(&self, env: Env) -> (Env, EvalResult) {
         // short circuit fold (kinda inefficient)
-        self.iter().fold(Raw(NULL), |acc, statement| match acc {
-            Return(_) => acc,
-            RuntimeError(_) => acc,
-            _ => statement.eval(env),
-        })
+        self.iter()
+            .fold((env, Raw(NULL)), |(prev_env, acc), statement| match acc {
+                Return(_) => (prev_env, acc),
+                RuntimeError(_) => (prev_env, acc),
+                _ => statement.eval(prev_env),
+            })
     }
 }
 
 impl Eval for Expression {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval(&self, env: Env) -> (Env, EvalResult) {
         // TODO there are some unimplemented cases here
         match self {
             Expression::Identifier(name) => match env.get(name) {
-                Some(&val) => Raw(val),
-                None => RuntimeError(Error::IdentifierNotFound {
-                    name: name.to_string(),
-                }),
+                Some(&val) => (env, Raw(val)),
+                None => (
+                    env,
+                    RuntimeError(Error::IdentifierNotFound {
+                        name: name.to_string(),
+                    }),
+                ),
             },
             // TODO check if this is safe
-            Expression::IntegerLiteral(val) => Raw(Object::Integer(*val as isize)),
-            Expression::Boolean(val) => Raw(Object::from_bool_val(*val)),
-            Expression::Prefix { operator, right } => eval_prefix_expr(*operator, right.eval(env)),
+            Expression::IntegerLiteral(val) => (env, Raw(Object::Integer(*val as isize))),
+            Expression::Boolean(val) => (env, Raw(Object::from_bool_val(*val))),
+            Expression::Prefix { operator, right } => {
+                let (new_env, result) = right.eval(env);
+                (new_env, eval_prefix_expr(*operator, result))
+            }
             Expression::Infix {
                 operator,
                 left,
                 right,
-            } => eval_infix_expr(*operator, left.eval(env), right.eval(env)),
+            } => {
+                let (new_env, left_result) = left.eval(env);
+                let (new_env2, right_result) = right.eval(new_env);
+
+                (
+                    new_env2,
+                    eval_infix_expr(*operator, left_result, right_result),
+                )
+            }
             Expression::If {
                 condition,
                 consequence,
@@ -173,19 +204,21 @@ fn eval_infix_expr(operator: Operator, left: EvalResult, right: EvalResult) -> E
 }
 
 fn eval_if_expr(
-    env: &mut Env,
+    env: Env,
     condition: &Box<Expression>,
     consequence: &Statements,
     alternative: &Statements,
-) -> EvalResult {
-    match condition.eval(env) {
+) -> (Env, EvalResult) {
+    let (new_env, result) = condition.eval(env);
+
+    match result {
         Raw(x) => {
             if x.is_truthy() {
-                consequence.eval(env)
+                consequence.eval(new_env)
             } else {
-                alternative.eval(env)
+                alternative.eval(new_env)
             }
         }
-        x => x,
+        x => (new_env, x),
     }
 }
