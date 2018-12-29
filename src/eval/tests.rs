@@ -1,4 +1,4 @@
-use crate::ast::Operator;
+use crate::ast::{Expression, Operator};
 use crate::eval::Error;
 use crate::lexer::Lexer;
 use crate::object::{Env, Object};
@@ -228,6 +228,41 @@ fn test_let_expr_error() {
         test_eval_error(inp, expected);
     }
 }
+
+// fn test_fn_object() {
+//     let cases = vec![(
+//         "fn(x, y) { x + y }",
+//         Object::Function {
+//             parameters: vec!["x".to_string(), "y".to_string()],
+//             body: vec![Statement::Expression(Expression::Infix {
+//                 operator: Operator::Plus,
+//                 left: Box::new(Expression::Identifier("x".to_string())),
+//                 right: Box::new(Expression::Identifier("y".to_string())),
+//             })],
+//         },
+//     )];
+
+//     for (inp, expected) in cases {
+//         test_eval(inp, expected);
+//     }
+// }
+
+// #[test]
+// fn test_fn_expr() {
+//     let cases = vec![
+//         ("let a = 5; a;", Object::Integer(5)),
+//         ("let a = 5 * 5; a;", Object::Integer(25)),
+//         ("let a = 5; let b = a; b;", Object::Integer(5)),
+//         (
+//             "let a = 5; let b = a; let c = a + b + 5; c;",
+//             Object::Integer(15),
+//         ),
+//     ];
+
+//     for (inp, expected) in cases {
+//         test_eval(inp, expected);
+//     }
+// }
 
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);

@@ -1,3 +1,4 @@
+use crate::ast::{Expression, Statements};
 use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -5,6 +6,11 @@ pub enum Object {
     Null,
     Boolean(bool),
     Integer(isize),
+    // Function {
+    //     // To be specific, this is a vec of Expression::Identifier
+    //     parameters: Vec<String>,
+    //     body: Statements,
+    // },
 }
 
 const TRUE: Object = Object::Boolean(true);
