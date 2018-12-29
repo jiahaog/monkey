@@ -150,13 +150,14 @@ fn eval_infix_expr(operator: Operator, left: EvalResult, right: EvalResult) -> E
         (Operator::Divide, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
             Raw(Object::Integer(left_val / right_val))
         }
-        // Relying on PartialOrd and PartialEq
-        (Operator::LessThan, Raw(left_val), Raw(right_val)) => {
+        (Operator::LessThan, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
             Raw(Object::from_bool_val(left_val < right_val))
         }
-        (Operator::GreaterThan, Raw(left_val), Raw(right_val)) => {
-            Raw(Object::from_bool_val(left_val > right_val))
-        }
+        (
+            Operator::GreaterThan,
+            Raw(Object::Integer(left_val)),
+            Raw(Object::Integer(right_val)),
+        ) => Raw(Object::from_bool_val(left_val > right_val)),
         (Operator::Equal, Raw(left_val), Raw(right_val)) => {
             Raw(Object::from_bool_val(left_val == right_val))
         }

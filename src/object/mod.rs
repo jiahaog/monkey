@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(PartialEq, Debug, PartialOrd, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Object {
     Null,
     Boolean(bool),
