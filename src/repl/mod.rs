@@ -1,5 +1,5 @@
+use crate::eval::Env;
 use crate::lexer::Lexer;
-use crate::object::Env;
 use crate::parser::Parser;
 use std::io::{BufRead, Write};
 

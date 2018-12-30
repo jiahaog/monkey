@@ -1,7 +1,7 @@
 use crate::ast::{Expression, Operator};
-use crate::eval::Error;
+use crate::eval::{Env, Error};
 use crate::lexer::Lexer;
-use crate::object::{Env, Object};
+use crate::object::Object;
 use crate::parser::Parser;
 
 #[test]
