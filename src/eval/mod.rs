@@ -36,52 +36,43 @@ impl Program {
             Some(Return(object)) => Ok(object.clone()),
             Some(Raw(object)) => Ok(object.clone()),
             Some(RuntimeError(err)) => Err(err.clone()),
+            // TODO references
+            Some(Reference(_r)) => unimplemented!(),
         }
     }
 }
 
 trait Eval {
-    fn eval(&self, env: Env) -> (Env);
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a;
 }
 
 // Internal evaluation result for short circuit of return statements and errors
 #[derive(Debug, Clone)]
-enum EvalResult {
+enum EvalResult<'a> {
     Raw(Object),
     Return(Object),
     RuntimeError(Error),
+    Reference(&'a Object),
 }
 
 // Environment for doing ast evaluations. Perhaps it might be better if we move this to another
 // module
-pub struct Env {
+pub struct Env<'a> {
     store: HashMap<String, Object>,
     // TODO return val should be a enum with either a raw object, or a reference pointing to an
     // object within the store
-    return_val: Option<EvalResult>,
+    return_val: Option<EvalResult<'a>>,
 }
 
-impl Env {
+impl<'a> Env<'a> {
     pub fn new() -> Self {
         Env {
             store: HashMap::new(),
             return_val: None,
         }
     }
-
-    // fn get(&self, name: &String) -> Option<&Object> {
-    //     self.store.get(name)
-    // }
-
-    // fn set(self, name: String, val: Object) -> Self {
-    //     let mut store = self.store;
-
-    //     store.insert(name, val);
-    //     Env {
-    //         store: store,
-    //         return_val: self.return_val,
-    //     }
-    // }
 
     fn map<F: FnOnce(Self) -> Self>(self, f: F) -> Self {
         f(self)
@@ -94,14 +85,14 @@ impl Env {
         }
     }
 
-    fn set_return_val(self, val: Option<EvalResult>) -> Self {
+    fn set_return_val(self, val: Option<EvalResult<'a>>) -> Self {
         Env {
             store: self.store,
             return_val: val,
         }
     }
 
-    fn get_return_val(&self) -> Option<&EvalResult> {
+    fn get_return_val(&self) -> Option<&EvalResult<'a>> {
         match &self.return_val {
             None => None,
             Some(x) => Some(&x),
@@ -125,6 +116,8 @@ impl Env {
             Some(Return(_)) => {
                 panic!("Return not allowed here: This should have been disallowed by the parser")
             }
+            // TODO references
+            Some(Reference(_r)) => unimplemented!(),
             None => self,
         }
     }
@@ -148,7 +141,10 @@ impl Env {
 }
 
 impl Eval for Program {
-    fn eval(&self, env: Env) -> (Env) {
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
         self.statements
             .eval(env)
             .map_return_val(|result| match result {
@@ -159,7 +155,10 @@ impl Eval for Program {
 }
 
 impl Eval for Statement {
-    fn eval(&self, env: Env) -> (Env) {
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
         match self {
             Statement::Let(identifier_name, expr) => expr
                 .eval(env)
@@ -174,7 +173,10 @@ impl Eval for Statement {
 }
 
 impl Eval for Statements {
-    fn eval(&self, env: Env) -> (Env) {
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
         self.iter().fold(
             env.set_return_val(None),
             |prev_env, statement| match prev_env.get_return_val() {
@@ -187,11 +189,14 @@ impl Eval for Statements {
 }
 
 impl Eval for Expression {
-    fn eval(&self, env: Env) -> (Env) {
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
         // TODO there are some unimplemented cases here
         match self {
             Expression::Identifier(name) => env.return_named_identifier(name.to_string()),
-            // TODO check if this is safe
+            // // TODO check if this is safe
             Expression::IntegerLiteral(val) => {
                 env.set_return_val(Some(Raw(Object::Integer(*val as isize))))
             }
@@ -237,10 +242,17 @@ fn eval_prefix_expr(operator: Operator, right: EvalResult) -> EvalResult {
             operator: operator,
             right: right,
         }),
+
+        // TODO reference
+        _ => unimplemented!(),
     }
 }
 
-fn eval_infix_expr(operator: Operator, left: &EvalResult, right: &EvalResult) -> EvalResult {
+fn eval_infix_expr<'a>(
+    operator: Operator,
+    left: &EvalResult,
+    right: &EvalResult,
+) -> EvalResult<'a> {
     match (operator, left, right) {
         (_, RuntimeError(x), _) => RuntimeError(x.clone()),
         (_, _, RuntimeError(x)) => RuntimeError(x.clone()),
@@ -277,15 +289,18 @@ fn eval_infix_expr(operator: Operator, left: &EvalResult, right: &EvalResult) ->
             left: left.clone(),
             right: right.clone(),
         }),
+
+        // TODO references
+        _ => unimplemented!(),
     }
 }
 
-fn eval_if_expr(
-    env: Env,
-    condition: &Box<Expression>,
-    consequence: &Statements,
-    alternative: &Statements,
-) -> (Env) {
+fn eval_if_expr<'a, 'b>(
+    env: Env<'a>,
+    condition: &'b Box<Expression>,
+    consequence: &'b Statements,
+    alternative: &'b Statements,
+) -> Env<'a> {
     condition
         .eval(env)
         .map(|new_env| match new_env.get_return_val() {
