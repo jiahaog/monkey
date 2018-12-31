@@ -34,8 +34,7 @@ where
     // TODO cleanup output
     match Parser::new(Lexer::new(&s)).parse() {
         Ok(program) => {
-            let result = program.evaluate(env);
-            output.write(format!("{:?}\n", result).as_bytes())
+            output.write(format!("{:?}\n", program.evaluate(env).get_result()).as_bytes())
         }
         Err(e) => output.write(format!("{:?}\n", e).as_bytes()),
     }

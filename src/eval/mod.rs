@@ -7,9 +7,10 @@ use std::collections::HashMap;
 #[cfg(test)]
 mod tests;
 
+// TODO cleanup the external api for this
 // TODO try to get rid of all the .clone()
 
-type Result = std::result::Result<Object, Error>;
+type Result<'a> = std::result::Result<&'a Object, Error>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
@@ -28,17 +29,8 @@ pub enum Error {
 }
 
 impl Program {
-    pub fn evaluate(&self, env: Env) -> Result {
-        match self.eval(env).get_return_val() {
-            // This should be the only place we use Object::NULL as we use optionals internally
-            // within this module to handle missing values
-            None => Ok(NULL),
-            Some(Return(object)) => Ok(object.clone()),
-            Some(Raw(object)) => Ok(object.clone()),
-            Some(RuntimeError(err)) => Err(err.clone()),
-            // TODO references
-            Some(Reference(_r)) => unimplemented!(),
-        }
+    pub fn evaluate<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b> {
+        self.eval(env)
     }
 }
 
@@ -48,13 +40,20 @@ trait Eval {
         'b: 'a;
 }
 
+#[derive(Debug, Clone)]
+enum EvalObject {
+    Anonymous,
+    Reference(String),
+}
+
 // Internal evaluation result for short circuit of return statements and errors
 #[derive(Debug, Clone)]
 enum EvalResult<'a> {
     Raw(Object),
     Return(Object),
     RuntimeError(Error),
-    Reference(&'a Object),
+    // TODO this can probably be deleted
+    ReferenceResult(&'a Object),
 }
 
 // Environment for doing ast evaluations. Perhaps it might be better if we move this to another
@@ -74,28 +73,64 @@ impl<'a> Env<'a> {
         }
     }
 
-    fn map<F: FnOnce(Self) -> Self>(self, f: F) -> Self {
-        f(self)
-    }
-
-    fn map_return_val<F: FnOnce(EvalResult) -> EvalResult>(self, f: F) -> Self {
-        Env {
-            store: self.store,
-            return_val: self.return_val.map(f),
-        }
-    }
-
-    fn set_return_val(self, val: Option<EvalResult<'a>>) -> Self {
-        Env {
-            store: self.store,
-            return_val: val,
-        }
-    }
-
-    fn get_return_val(&self) -> Option<&EvalResult<'a>> {
+    pub fn get_result(&self) -> Result {
         match &self.return_val {
-            None => None,
-            Some(x) => Some(&x),
+            // This should be the only place we use Object::NULL as we use optionals internally
+            // within this module to handle missing values
+            None => Ok(&NULL),
+            Some(Return(object)) => Ok(&object),
+            Some(Raw(object)) => Ok(&object),
+            Some(RuntimeError(err)) => Err(err.clone()),
+            // TODO references
+            Some(ReferenceResult(_r)) => unimplemented!(),
+        }
+    }
+
+    fn map<F: FnOnce(Self) -> Self>(self, f: F) -> Self {
+        match self.return_val {
+            Some(Raw(_)) | None => f(Env {
+                store: self.store,
+                return_val: self.return_val,
+            }),
+            // Return, RuntimeError
+            x => Env {
+                store: self.store,
+                return_val: x,
+            },
+        }
+    }
+
+    fn set_return_val_state_true(self) -> Self {
+        self.map(|env| Env {
+            store: env.store,
+            return_val: env.return_val.map(|val| match val {
+                Raw(x) => Return(x),
+                x => x,
+            }),
+        })
+    }
+
+    fn map_return_obj<F: FnOnce(Object) -> std::result::Result<Object, Error>>(self, f: F) -> Self {
+        self.map(|env| Env {
+            store: env.store,
+            return_val: env.return_val.map(|val| match val {
+                Raw(object) => match f(object) {
+                    Ok(x) => Raw(x),
+                    Err(x) => RuntimeError(x),
+                },
+                _ => panic!("This should have been handled by env.map"),
+            }),
+        })
+    }
+
+    fn set_return_val(self, val: std::result::Result<Option<Object>, Error>) -> Self {
+        Env {
+            store: self.store,
+            return_val: match val {
+                Ok(Some(object)) => Some(Raw(object)),
+                Ok(None) => None,
+                Err(x) => Some(RuntimeError(x)),
+            },
         }
     }
 
@@ -117,7 +152,7 @@ impl<'a> Env<'a> {
                 panic!("Return not allowed here: This should have been disallowed by the parser")
             }
             // TODO references
-            Some(Reference(_r)) => unimplemented!(),
+            Some(ReferenceResult(_r)) => unimplemented!(),
             None => self,
         }
     }
@@ -133,9 +168,9 @@ impl<'a> Env<'a> {
                     return_val: Some(Raw(val)),
                 }
             }
-            None => self.set_return_val(Some(RuntimeError(Error::IdentifierNotFound {
+            None => self.set_return_val(Err(Error::IdentifierNotFound {
                 name: name.to_string(),
-            }))),
+            })),
         }
     }
 }
@@ -145,12 +180,7 @@ impl Eval for Program {
     where
         'b: 'a,
     {
-        self.statements
-            .eval(env)
-            .map_return_val(|result| match result {
-                Return(x) => Raw(x),
-                result => result,
-            })
+        self.statements.eval(env)
     }
 }
 
@@ -164,10 +194,7 @@ impl Eval for Statement {
                 .eval(env)
                 .bind_return_value(identifier_name.to_string()),
             Statement::Expression(expr) => expr.eval(env),
-            Statement::Return(expr) => expr.eval(env).map_return_val(|result| match result {
-                Raw(x) => Return(x),
-                x => x,
-            }),
+            Statement::Return(expr) => expr.eval(env).set_return_val_state_true(),
         }
     }
 }
@@ -177,14 +204,11 @@ impl Eval for Statements {
     where
         'b: 'a,
     {
-        self.iter().fold(
-            env.set_return_val(None),
-            |prev_env, statement| match prev_env.get_return_val() {
-                // short circuit fold (kinda inefficient)
-                Some(Return(_)) | Some(RuntimeError(_)) => prev_env,
-                _ => statement.eval(prev_env),
-            },
-        )
+        self.iter()
+            // short circuit fold (kinda inefficient)
+            .fold(env.set_return_val(Ok(None)), |acc, statement| {
+                acc.map(|prev_env| statement.eval(prev_env))
+            })
     }
 }
 
@@ -198,28 +222,33 @@ impl Eval for Expression {
             Expression::Identifier(name) => env.return_named_identifier(name.to_string()),
             // // TODO check if this is safe
             Expression::IntegerLiteral(val) => {
-                env.set_return_val(Some(Raw(Object::Integer(*val as isize))))
+                env.set_return_val(Ok(Some(Object::Integer(*val as isize))))
             }
-            Expression::Boolean(val) => env.set_return_val(Some(Raw(Object::from_bool_val(*val)))),
+            Expression::Boolean(val) => env.set_return_val(Ok(Some(Object::from_bool_val(*val)))),
             Expression::Prefix { operator, right } => right
                 .eval(env)
-                .map_return_val(|result| eval_prefix_expr(*operator, result)),
+                .map_return_obj(|result| eval_prefix_expr(*operator, result)),
             Expression::Infix {
                 operator,
                 left,
                 right,
-            } => left.eval(env).map(|left_env| {
-                let left_return_val = left_env.get_return_val().cloned();
+            } => {
+                // TODO Not sure if there's a better way to do this. Perhaps we should be using
+                // env.eval(Expression) or something instead?
+                let left_env = left.eval(env);
 
-                let right_env = right.eval(left_env);
+                if let Ok(left_obj_original) = left_env.get_result().clone() {
+                    let left_obj = left_obj_original.clone();
 
-                match (left_return_val, right_env.get_return_val()) {
-                    (Some(left_result), Some(_)) => right_env.map_return_val(|right_result| {
-                        eval_infix_expr(*operator, &left_result, &right_result)
-                    }),
-                    _ => panic!("This should have been caught by the parser"),
+                    let right_env = right.eval(left_env);
+
+                    right_env
+                        .map_return_obj(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
+                } else {
+                    left_env
                 }
-            }),
+            }
+
             Expression::If {
                 condition,
                 consequence,
@@ -230,68 +259,52 @@ impl Eval for Expression {
     }
 }
 
-fn eval_prefix_expr(operator: Operator, right: EvalResult) -> EvalResult {
+fn eval_prefix_expr(operator: Operator, right: Object) -> std::result::Result<Object, Error> {
     match (operator, right) {
-        (_, RuntimeError(x)) => RuntimeError(x),
-        (_, Return(x)) => Return(x),
-        (Operator::Not, Raw(Object::Boolean(true))) => Raw(Object::from_bool_val(false)),
-        (Operator::Not, Raw(Object::Boolean(false))) => Raw(Object::from_bool_val(true)),
-        (Operator::Not, Raw(Object::Integer(_))) => Raw(Object::from_bool_val(false)),
-        (Operator::Minus, Raw(Object::Integer(val))) => Raw(Object::Integer(-val)),
-        (operator, Raw(right)) => RuntimeError(Error::UnknownOperation {
+        (Operator::Not, Object::Boolean(true)) => Ok(Object::from_bool_val(false)),
+        (Operator::Not, Object::Boolean(false)) => Ok(Object::from_bool_val(true)),
+        (Operator::Not, Object::Integer(_)) => Ok(Object::from_bool_val(false)),
+        (Operator::Minus, Object::Integer(val)) => Ok(Object::Integer(-val)),
+        (operator, right) => Err(Error::UnknownOperation {
             operator: operator,
             right: right,
         }),
-
-        // TODO reference
-        _ => unimplemented!(),
     }
 }
 
 fn eval_infix_expr<'a>(
-    operator: Operator,
-    left: &EvalResult,
-    right: &EvalResult,
-) -> EvalResult<'a> {
+    operator: &Operator,
+    left: Object,
+    right: Object,
+) -> std::result::Result<Object, Error> {
     match (operator, left, right) {
-        (_, RuntimeError(x), _) => RuntimeError(x.clone()),
-        (_, _, RuntimeError(x)) => RuntimeError(x.clone()),
-        (_, Return(x), _) => Return(x.clone()),
-        (_, _, Return(x)) => Return(x.clone()),
-        (Operator::Plus, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val + right_val))
+        (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val + right_val))
         }
-        (Operator::Minus, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val - right_val))
+        (Operator::Minus, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val - right_val))
         }
-        (Operator::Multiply, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val * right_val))
+        (Operator::Multiply, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val * right_val))
         }
-        (Operator::Divide, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val / right_val))
+        (Operator::Divide, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val / right_val))
         }
-        (Operator::LessThan, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::from_bool_val(left_val < right_val))
+        (Operator::LessThan, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::from_bool_val(left_val < right_val))
         }
-        (
-            Operator::GreaterThan,
-            Raw(Object::Integer(left_val)),
-            Raw(Object::Integer(right_val)),
-        ) => Raw(Object::from_bool_val(left_val > right_val)),
-        (Operator::Equal, Raw(left_val), Raw(right_val)) => {
-            Raw(Object::from_bool_val(left_val == right_val))
+        (Operator::GreaterThan, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::from_bool_val(left_val > right_val))
         }
-        (Operator::NotEqual, Raw(left_val), Raw(right_val)) => {
-            Raw(Object::from_bool_val(left_val != right_val))
+        (Operator::Equal, left_val, right_val) => Ok(Object::from_bool_val(left_val == right_val)),
+        (Operator::NotEqual, left_val, right_val) => {
+            Ok(Object::from_bool_val(left_val != right_val))
         }
-        (operator, Raw(left), Raw(right)) => RuntimeError(Error::TypeMismatch {
-            operator: operator,
+        (operator, left, right) => Err(Error::TypeMismatch {
+            operator: *operator,
             left: left.clone(),
             right: right.clone(),
         }),
-
-        // TODO references
-        _ => unimplemented!(),
     }
 }
 
@@ -303,15 +316,14 @@ fn eval_if_expr<'a, 'b>(
 ) -> Env<'a> {
     condition
         .eval(env)
-        .map(|new_env| match new_env.get_return_val() {
-            Some(Raw(x)) => {
-                if x.is_truthy() {
+        .map(|new_env| match new_env.get_result() {
+            Ok(object) => {
+                if object.is_truthy() {
                     consequence.eval(new_env)
                 } else {
                     alternative.eval(new_env)
                 }
             }
-            Some(RuntimeError(_)) => new_env,
-            _ => panic!("Conditionals doing weird things should have been caught by the parser"),
+            _ => new_env,
         })
 }

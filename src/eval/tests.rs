@@ -270,8 +270,8 @@ fn test_eval(inp: &str, expected: Object) {
 
     let program = parser.parse().expect("No parse errors");
 
-    match program.evaluate(Env::new()) {
-        Ok(received) => assert_eq!(expected, received),
+    match program.evaluate(Env::new()).get_result() {
+        Ok(received) => assert_eq!(&expected, received),
         Err(received) => panic!("Received {:?} was not expected", received),
     }
 }
@@ -282,7 +282,7 @@ fn test_eval_error(inp: &str, expected: Error) {
 
     let program = parser.parse().expect("No parse errors");
 
-    match program.evaluate(Env::new()) {
+    match program.evaluate(Env::new()).get_result() {
         Err(received) => assert_eq!(expected, received),
         Ok(received) => panic!(
             "Expected error {:?}, received result {:?}",
