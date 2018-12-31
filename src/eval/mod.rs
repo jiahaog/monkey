@@ -62,14 +62,14 @@ pub struct Env<'a> {
     store: HashMap<String, Object>,
     // TODO return val should be a enum with either a raw object, or a reference pointing to an
     // object within the store
-    return_val: Option<EvalResult<'a>>,
+    return_val: EvalResult<'a>,
 }
 
 impl<'a> Env<'a> {
     pub fn new() -> Self {
         Env {
             store: HashMap::new(),
-            return_val: None,
+            return_val: Raw(NULL),
         }
     }
 
@@ -77,21 +77,17 @@ impl<'a> Env<'a> {
         match &self.return_val {
             // This should be the only place we use Object::NULL as we use optionals internally
             // within this module to handle missing values
-            None => Ok(&NULL),
-            Some(Return(object)) => Ok(&object),
-            Some(Raw(object)) => Ok(&object),
-            Some(RuntimeError(err)) => Err(err.clone()),
+            Return(object) => Ok(&object),
+            Raw(object) => Ok(&object),
+            RuntimeError(err) => Err(err.clone()),
             // TODO references
-            Some(ReferenceResult(_r)) => unimplemented!(),
+            ReferenceResult(_r) => unimplemented!(),
         }
     }
 
     fn map<F: FnOnce(Self) -> Self>(self, f: F) -> Self {
         match self.return_val {
-            Some(Raw(_)) | None => f(Env {
-                store: self.store,
-                return_val: self.return_val,
-            }),
+            Raw(_) => f(self),
             // Return, RuntimeError
             x => Env {
                 store: self.store,
@@ -103,58 +99,51 @@ impl<'a> Env<'a> {
     fn set_return_val_state_true(self) -> Self {
         self.map(|env| Env {
             store: env.store,
-            return_val: env.return_val.map(|val| match val {
+            return_val: match env.return_val {
                 Raw(x) => Return(x),
                 x => x,
-            }),
+            },
         })
     }
 
     fn map_return_obj<F: FnOnce(Object) -> std::result::Result<Object, Error>>(self, f: F) -> Self {
         self.map(|env| Env {
             store: env.store,
-            return_val: env.return_val.map(|val| match val {
+            return_val: match env.return_val {
                 Raw(object) => match f(object) {
                     Ok(x) => Raw(x),
                     Err(x) => RuntimeError(x),
                 },
                 _ => panic!("This should have been handled by env.map"),
-            }),
+            },
         })
     }
 
-    fn set_return_val(self, val: std::result::Result<Option<Object>, Error>) -> Self {
+    fn set_return_val(self, val: std::result::Result<Object, Error>) -> Self {
         Env {
             store: self.store,
             return_val: match val {
-                Ok(Some(object)) => Some(Raw(object)),
-                Ok(None) => None,
-                Err(x) => Some(RuntimeError(x)),
+                Ok(object) => Raw(object),
+                Err(x) => RuntimeError(x),
             },
         }
     }
 
     // stores the return value into the store, with the name parameter
     fn bind_return_value(self, name: String) -> Self {
-        match self.return_val {
-            Some(RuntimeError(_)) => self,
-            Some(Raw(result)) => {
+        self.map(|env| match env.return_val {
+            Raw(result) => {
                 // TODO This code duplicates stuff from self.set
-                let mut store = self.store;
+                let mut store = env.store;
 
                 store.insert(name, result);
                 Env {
                     store: store,
-                    return_val: None,
+                    return_val: Raw(NULL),
                 }
             }
-            Some(Return(_)) => {
-                panic!("Return not allowed here: This should have been disallowed by the parser")
-            }
-            // TODO references
-            Some(ReferenceResult(_r)) => unimplemented!(),
-            None => self,
-        }
+            _ => panic!("This should have been handled by env.map"),
+        })
     }
 
     // Sets the identifier with the name parameter as the return value
@@ -165,7 +154,7 @@ impl<'a> Env<'a> {
                 self.store.insert(name, val.clone());
                 Env {
                     store: self.store,
-                    return_val: Some(Raw(val)),
+                    return_val: Raw(val),
                 }
             }
             None => self.set_return_val(Err(Error::IdentifierNotFound {
@@ -206,7 +195,7 @@ impl Eval for Statements {
     {
         self.iter()
             // short circuit fold (kinda inefficient)
-            .fold(env.set_return_val(Ok(None)), |acc, statement| {
+            .fold(env.set_return_val(Ok(NULL)), |acc, statement| {
                 acc.map(|prev_env| statement.eval(prev_env))
             })
     }
@@ -222,9 +211,9 @@ impl Eval for Expression {
             Expression::Identifier(name) => env.return_named_identifier(name.to_string()),
             // // TODO check if this is safe
             Expression::IntegerLiteral(val) => {
-                env.set_return_val(Ok(Some(Object::Integer(*val as isize))))
+                env.set_return_val(Ok(Object::Integer(*val as isize)))
             }
-            Expression::Boolean(val) => env.set_return_val(Ok(Some(Object::from_bool_val(*val)))),
+            Expression::Boolean(val) => env.set_return_val(Ok(Object::from_bool_val(*val))),
             Expression::Prefix { operator, right } => right
                 .eval(env)
                 .map_return_obj(|result| eval_prefix_expr(*operator, result)),
