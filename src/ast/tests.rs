@@ -27,10 +27,7 @@ fn test_display() {
         ),
         (
             Expression::FunctionLiteral {
-                params: vec![
-                    Expression::Identifier("x".to_string()),
-                    Expression::Identifier("y".to_string()),
-                ],
+                params: vec!["x".to_string(), "y".to_string()],
                 body: vec![
                     Statement::Expression(Expression::Infix {
                         operator: Operator::Plus,

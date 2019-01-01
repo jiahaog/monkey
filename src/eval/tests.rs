@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Operator};
+use crate::ast::{Expression, Operator, Statement};
 use crate::eval::{Env, Error};
 use crate::lexer::Lexer;
 use crate::object::Object;
