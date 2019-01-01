@@ -12,7 +12,7 @@ use self::error::Error;
 
 // TODO Avoid cloning objects in Errors
 
-type Result<'a> = std::result::Result<&'a Object, Error>;
+type Result<'a> = std::result::Result<&'a Object, &'a Error>;
 
 impl Program {
     pub fn evaluate<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b> {
@@ -82,6 +82,16 @@ impl Eval for Expression {
                 left,
                 right,
             } => {
+                // TODO
+                // This should be doable with RC
+                // left.eval(env).map(|left_env| {
+                //     let left_obj = left_env.get_rc_result();
+
+                //     right
+                //         .eval(left_env)
+                //         .map(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
+                // });
+
                 // TODO Not sure if there's a better way to do this. Perhaps we should be using
                 // env.eval(Expression) or something instead?
                 let left_env = left.eval(env);
@@ -151,8 +161,8 @@ fn eval_infix_expr<'a>(
         }
         (operator, left, right) => Err(Error::TypeMismatch {
             operator: *operator,
-            left: left.clone(),
-            right: right.clone(),
+            left: left,
+            right: right,
         }),
     }
 }

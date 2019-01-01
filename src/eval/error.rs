@@ -1,7 +1,7 @@
 use crate::ast::Operator;
 use crate::object::Object;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     TypeMismatch {
         operator: Operator,

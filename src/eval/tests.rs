@@ -283,7 +283,7 @@ fn test_eval_error(inp: &str, expected: Error) {
     let program = parser.parse().expect("No parse errors");
 
     match program.evaluate(Env::new()).get_result() {
-        Err(received) => assert_eq!(expected, received),
+        Err(received) => assert_eq!(&expected, received),
         Ok(received) => panic!(
             "Expected error {:?}, received result {:?}",
             expected, received
