@@ -1,14 +1,14 @@
-use self::EvalResult::*;
 use crate::ast::{Expression, Operator, Program, Statement, Statements};
 use crate::object::{Object, NULL};
 
+use self::ReturnState::*;
 use std::collections::HashMap;
 
 #[cfg(test)]
 mod tests;
 
 // TODO cleanup the external api for this
-// TODO try to get rid of all the .clone()
+// TODO Avoid cloning objects in Errors
 
 type Result<'a> = std::result::Result<&'a Object, Error>;
 
@@ -40,127 +40,191 @@ trait Eval {
         'b: 'a;
 }
 
-#[derive(Debug, Clone)]
-enum EvalObject {
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+enum EnvKey {
+    Identifier(String),
     Anonymous,
-    Reference(String),
 }
 
-// Internal evaluation result for short circuit of return statements and errors
-#[derive(Debug, Clone)]
-enum EvalResult<'a> {
-    Raw(Object),
-    Return(Object),
+#[derive(Debug)]
+enum ReturnState<'a> {
+    Nothing,
+    PlainObject(EnvKey),
+    ReturningObject(EnvKey),
     RuntimeError(Error),
-    // TODO this can probably be deleted
-    ReferenceResult(&'a Object),
+    // TODO remove this once we are sure we don't need liftimes in Env
+    LifetimeHack(&'a str),
 }
 
-// Environment for doing ast evaluations. Perhaps it might be better if we move this to another
-// module
+// Key design notes: a state variable is used to key the "last", or final object in the current
+// evaluation for the environment to the store. This is done to avoid duplicating this object both
+// inside and outside of the store, and also because I don't think it's possible to store a
+// reference to a another struct field within the same struct in safe rust.
+//
+// This leaves us with having to maintain the invariant that return_state should always be a valid
+// indicator of objects in the store, hence the use of panics in the code here.
+//
+// Rules:
+// - Types used by this object should not be exposed to consumers even in the same module
+// - Methods should preserve immutability
+#[derive(Debug)]
 pub struct Env<'a> {
-    store: HashMap<String, Object>,
-    // TODO return val should be a enum with either a raw object, or a reference pointing to an
-    // object within the store
-    return_val: EvalResult<'a>,
+    store: HashMap<EnvKey, Object>,
+    return_state: ReturnState<'a>,
 }
 
 impl<'a> Env<'a> {
     pub fn new() -> Self {
-        Env {
+        Self {
             store: HashMap::new(),
-            return_val: Raw(NULL),
+            return_state: Nothing,
         }
     }
 
     pub fn get_result(&self) -> Result {
-        match &self.return_val {
-            // This should be the only place we use Object::NULL as we use optionals internally
-            // within this module to handle missing values
-            Return(object) => Ok(&object),
-            Raw(object) => Ok(&object),
+        match &self.return_state {
+            Nothing => Ok(&NULL),
+            ReturningObject(key) | PlainObject(key) => Ok(self
+                .store
+                .get(key)
+                .expect("Return state should always be a valid key to an object")),
             RuntimeError(err) => Err(err.clone()),
-            // TODO references
-            ReferenceResult(_r) => unimplemented!(),
+            LifetimeHack(_) => unimplemented!(),
         }
     }
+
+    // TODO refactor private functions to module
 
     fn map<F: FnOnce(Self) -> Self>(self, f: F) -> Self {
-        match self.return_val {
-            Raw(_) => f(self),
-            // Return, RuntimeError
-            x => Env {
-                store: self.store,
-                return_val: x,
-            },
+        match self.return_state {
+            ReturningObject(_) | RuntimeError(_) => self,
+            _ => f(self),
         }
-    }
-
-    fn set_return_val_state_true(self) -> Self {
-        self.map(|env| Env {
-            store: env.store,
-            return_val: match env.return_val {
-                Raw(x) => Return(x),
-                x => x,
-            },
-        })
     }
 
     fn map_return_obj<F: FnOnce(Object) -> std::result::Result<Object, Error>>(self, f: F) -> Self {
-        self.map(|env| Env {
+        self.map(|env| {
+            let mut store = env.store;
+
+            match env.return_state {
+                PlainObject(key) => {
+                    let obj = store.remove(&key).expect("State should be valid key");
+                    match f(obj) {
+                        Ok(new_obj) => {
+                            // Not sure if we can avoid cloning here, need to think this through
+                            store.insert(key.clone(), new_obj);
+
+                            Self {
+                                store: store,
+                                return_state: PlainObject(key),
+                            }
+                        }
+                        Err(err) => Self {
+                            store: store,
+                            return_state: RuntimeError(err),
+                        },
+                    }
+                }
+                _ => panic!("should be handled by map"),
+            }
+        })
+    }
+
+    fn set_key_val(self, name: String, obj: Object) -> Self {
+        self.map(|env| {
+            let mut store = env.store;
+
+            store.insert(EnvKey::Identifier(name), obj);
+
+            Self {
+                store: store,
+                return_state: env.return_state,
+            }
+        })
+    }
+
+    // TODO rename this
+    fn set_return_val(self, obj: Object) -> Self {
+        self.map(|env| {
+            let mut store = env.store;
+
+            store.insert(EnvKey::Anonymous, obj);
+
+            Self {
+                store: store,
+                return_state: PlainObject(EnvKey::Anonymous),
+            }
+        })
+    }
+
+    // Stores the anonymous return val as the named string
+    fn bind_return_value_to_store(self, name: String) -> Self {
+        self.map(|mut env| match &env.return_state {
+            PlainObject(key) => match key {
+                EnvKey::Anonymous => {
+                    let obj = env.store.remove(&EnvKey::Anonymous);
+
+                    env.set_key_val(
+                        name,
+                        obj.expect("Return state should always be a key to a valid object"),
+                    )
+                }
+                EnvKey::Identifier(_) => {
+                    // TODO Fix this, this duplicates the object instead of using a reference to
+                    // the original identifier
+                    // '''
+                    // let a = 5;
+                    // let b = a;
+                    // b
+                    // '''
+                    // This should be fixable by storing our objects in the hashmap using RC
+                    let obj = env
+                        .store
+                        .get(key)
+                        .expect("Return state should be a key to a valid object")
+                        .clone();
+
+                    env.set_key_val(name, obj)
+                }
+            },
+            _ => panic!("This should have been handled by map"),
+        })
+    }
+
+    // Sets the object named as name as the return val
+    fn set_return_val_from_name(self, name: String) -> Self {
+        self.map(|env| {
+            let key = EnvKey::Identifier(name);
+
+            if env.store.contains_key(&key) {
+                Self {
+                    store: env.store,
+                    return_state: PlainObject(key),
+                }
+            } else {
+                Self {
+                    store: env.store,
+                    return_state: RuntimeError(Error::IdentifierNotFound {
+                        name: match key {
+                            EnvKey::Identifier(name) => name,
+                            _ => panic!("Expected a identifier key type"),
+                        },
+                    }),
+                }
+            }
+        })
+    }
+
+    // This is to signal that subsequent changes to the state should be skipped, as the evaluation
+    // is in a "retuning" state
+    fn set_return_val_short_circuit(self) -> Self {
+        self.map(|env| Self {
             store: env.store,
-            return_val: match env.return_val {
-                Raw(object) => match f(object) {
-                    Ok(x) => Raw(x),
-                    Err(x) => RuntimeError(x),
-                },
-                _ => panic!("This should have been handled by env.map"),
+            return_state: match env.return_state {
+                PlainObject(key) => ReturningObject(key),
+                x => x,
             },
         })
-    }
-
-    fn set_return_val(self, val: std::result::Result<Object, Error>) -> Self {
-        Env {
-            store: self.store,
-            return_val: match val {
-                Ok(object) => Raw(object),
-                Err(x) => RuntimeError(x),
-            },
-        }
-    }
-
-    // stores the return value into the store, with the name parameter
-    fn bind_return_value(self, name: String) -> Self {
-        self.map(|env| match env.return_val {
-            Raw(result) => {
-                // TODO This code duplicates stuff from self.set
-                let mut store = env.store;
-
-                store.insert(name, result);
-                Env {
-                    store: store,
-                    return_val: Raw(NULL),
-                }
-            }
-            _ => panic!("This should have been handled by env.map"),
-        })
-    }
-
-    // Sets the identifier with the name parameter as the return value
-    fn return_named_identifier(mut self, name: String) -> Self {
-        match self.store.remove(&name) {
-            Some(val) => {
-                // TODO fix owing two of the same object in the env
-                self.store.insert(name, val.clone());
-                Env {
-                    store: self.store,
-                    return_val: Raw(val),
-                }
-            }
-            None => self.set_return_val(Err(Error::IdentifierNotFound {
-                name: name.to_string(),
-            })),
-        }
     }
 }
 
@@ -181,9 +245,9 @@ impl Eval for Statement {
         match self {
             Statement::Let(identifier_name, expr) => expr
                 .eval(env)
-                .bind_return_value(identifier_name.to_string()),
+                .bind_return_value_to_store(identifier_name.to_string()),
             Statement::Expression(expr) => expr.eval(env),
-            Statement::Return(expr) => expr.eval(env).set_return_val_state_true(),
+            Statement::Return(expr) => expr.eval(env).set_return_val_short_circuit(),
         }
     }
 }
@@ -195,7 +259,7 @@ impl Eval for Statements {
     {
         self.iter()
             // short circuit fold (kinda inefficient)
-            .fold(env.set_return_val(Ok(NULL)), |acc, statement| {
+            .fold(env.set_return_val(NULL), |acc, statement| {
                 acc.map(|prev_env| statement.eval(prev_env))
             })
     }
@@ -208,12 +272,10 @@ impl Eval for Expression {
     {
         // TODO there are some unimplemented cases here
         match self {
-            Expression::Identifier(name) => env.return_named_identifier(name.to_string()),
+            Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
             // // TODO check if this is safe
-            Expression::IntegerLiteral(val) => {
-                env.set_return_val(Ok(Object::Integer(*val as isize)))
-            }
-            Expression::Boolean(val) => env.set_return_val(Ok(Object::from_bool_val(*val))),
+            Expression::IntegerLiteral(val) => env.set_return_val(Object::Integer(*val as isize)),
+            Expression::Boolean(val) => env.set_return_val(Object::from_bool_val(*val)),
             Expression::Prefix { operator, right } => right
                 .eval(env)
                 .map_return_obj(|result| eval_prefix_expr(*operator, result)),
