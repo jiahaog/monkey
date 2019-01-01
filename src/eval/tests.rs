@@ -203,11 +203,16 @@ fn test_let_expr() {
     let cases = vec![
         ("let a = 5; a;", Object::Integer(5)),
         ("let a = 5 * 5; a;", Object::Integer(25)),
+        ("let a = 1; let b = 2; a + b", Object::Integer(3)),
+        ("let a = 1; let b = a + a; b;", Object::Integer(2)),
+        ("let a = 1; let b = a; a + b", Object::Integer(2)),
         ("let a = 5; let b = a; b;", Object::Integer(5)),
         (
             "let a = 5; let b = a; let c = a + b + 5; c;",
             Object::Integer(15),
         ),
+        // This tests for cloning of variables
+        ("let a = 1; let b = a; let a = 2; b", Object::Integer(1)),
     ];
 
     for (inp, expected) in cases {

@@ -81,33 +81,13 @@ impl Eval for Expression {
                 operator,
                 left,
                 right,
-            } => {
-                // TODO
-                // This should be doable with RC
-                // left.eval(env).map(|left_env| {
-                //     let left_obj = left_env.get_rc_result();
+            } => left.eval(env).map(|left_env| {
+                let left_obj = left_env.get_result().unwrap().clone();
 
-                //     right
-                //         .eval(left_env)
-                //         .map(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
-                // });
-
-                // TODO Not sure if there's a better way to do this. Perhaps we should be using
-                // env.eval(Expression) or something instead?
-                let left_env = left.eval(env);
-
-                if let Ok(left_obj_original) = left_env.get_result().clone() {
-                    let left_obj = left_obj_original.clone();
-
-                    let right_env = right.eval(left_env);
-
-                    right_env
-                        .map_return_obj(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
-                } else {
-                    left_env
-                }
-            }
-
+                right
+                    .eval(left_env)
+                    .map_return_obj(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
+            }),
             Expression::If {
                 condition,
                 consequence,

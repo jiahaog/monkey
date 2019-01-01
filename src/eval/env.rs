@@ -52,14 +52,10 @@ impl<'a> Env<'a> {
                 .store
                 .get(key)
                 .expect("Return state should always be a valid key to an object")),
-            RuntimeError(err) => Err(err.clone()),
+            RuntimeError(err) => Err(err),
             LifetimeHack(_) => unimplemented!(),
         }
     }
-
-    // TODO refactor private functions to module
-    //
-    //
 
     pub(super) fn map<F: FnOnce(Self) -> Self>(self, f: F) -> Self {
         match self.return_state {
