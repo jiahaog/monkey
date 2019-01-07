@@ -130,7 +130,11 @@ impl Eval for Expression {
                             arguments,
                         );
 
-                        Env::with_return_from(env, child_env)
+                        let return_val = child_env
+                            .get_return_hack()
+                            .expect("I didn't think this through");
+
+                        env.set_return_val(return_val)
                     })
                 })
             }

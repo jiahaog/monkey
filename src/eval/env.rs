@@ -49,15 +49,26 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub(super) fn new_extending<'b, 'c>(parent: &'b Env<'b>) -> Env<'c>
+    pub(super) fn new_extending<'b>(parent: &'b Env<'b>) -> Env<'a>
     where
-        'c: 'b,
+        'b: 'a,
     {
-        // uncomment this to see the failure
-        unimplemented!()
-        // let mut result = Self::new();
-        // result.parent = Some(parent);
-        // result
+        let mut result = Self::new();
+        result.parent = Some(parent);
+        result
+    }
+
+    // TODO fix this
+    pub fn get_return_hack(mut self) -> std::result::Result<Object, Error> {
+        match self.return_state {
+            Nothing => Ok(NULL),
+            ReturningObject(key) | PlainObject(key) => Ok(self
+                .store
+                .remove(&key)
+                .expect("Return state should always be a valid key to an object")),
+            RuntimeError(err) => panic!("{:?} err", err),
+            LifetimeHack(_) => unimplemented!(),
+        }
     }
 
     pub fn get_result(&self) -> Result {
@@ -94,14 +105,6 @@ impl<'a> Env<'a> {
                 _ => panic!("return state should always be valid"),
             },
             _ => env,
-        })
-    }
-
-    pub(super) fn with_return_from(main_env: Self, other_env: Self) -> Self {
-        main_env.map(|env| Self {
-            store: env.store,
-            return_state: other_env.return_state,
-            parent: env.parent,
         })
     }
 
