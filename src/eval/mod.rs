@@ -68,7 +68,6 @@ impl Eval for Expression {
     where
         'b: 'a,
     {
-        // TODO there are some unimplemented cases here
         match self {
             Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
             // // TODO check if this is safe
@@ -93,9 +92,80 @@ impl Eval for Expression {
                 consequence,
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
-            x => unimplemented!("{:?}", x),
+            Expression::FunctionLiteral { params, body } => env.set_return_val(Object::Function {
+                params: params.clone(),
+                body: body.clone(),
+            }),
+            Expression::Call {
+                function,
+                arguments,
+            } => {
+                // 1. Convert the function to an object (and check if it exists)
+                // 2. Create a new child env
+                // 3. Evaluate each zip(parameter, argument) in the new child env
+                // 4. get the result of body.eval(child_env) and put it in the parent env
+
+                let env_with_func: Env = match &**function {
+                    Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
+                    Expression::FunctionLiteral { params, body } => {
+                        env.set_return_val(Object::Function {
+                            params: params.clone(),
+                            body: body.clone(),
+                        })
+                    }
+                    x => panic!("Call.function should not be of this variant: {:?}", x),
+                };
+
+                let env_with_correct_obj = env_with_func.map_return_obj(|obj| match obj {
+                    Object::Function { params: _, body: _ } => Ok(obj),
+                    unexpected_obj => Err(Error::CallExpressionExpectedFunction {
+                        received: unexpected_obj.clone(),
+                    }),
+                });
+
+                env_with_correct_obj.map(|env| {
+                    env.map_separated(|env, object| {
+                        let child_env = eval_multiple(
+                            Env::new_extending(&env).set_return_val(object),
+                            arguments,
+                        );
+
+                        Env::with_return_from(env, child_env)
+                    })
+                })
+            }
         }
     }
+}
+
+fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
+    env.map_return_obj(|object| {
+        match &object {
+            Object::Function { params, body } => {
+                if arguments.len() != params.len() {
+                    // TODO more information in error
+                    Err(Error::CallExpressionWrongNumArgs)
+                } else {
+                    Ok(object)
+                }
+            }
+            _ => panic!("Checks have been done earlier"),
+        }
+    })
+    .map_separated(|env, object| match object {
+        Object::Function { params, body } => {
+            let env_with_args = eval_multiple_args(env, arguments, params);
+            body.eval(env_with_args)
+        }
+        _ => panic!(),
+    })
+}
+
+fn eval_multiple_args<'a>(env: Env<'a>, args: &Vec<Expression>, params: Vec<String>) -> Env<'a> {
+    let zipped = args.iter().zip(params);
+    zipped.fold(env, |acc, (expr, param_name)| {
+        expr.eval(acc).bind_return_value_to_store(param_name)
+    })
 }
 
 fn eval_prefix_expr(operator: Operator, right: Object) -> std::result::Result<Object, Error> {

@@ -4,6 +4,8 @@ use super::Result;
 use crate::object::{Object, NULL};
 use std::collections::HashMap;
 
+// TODO reduce number of panics
+
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
 enum EnvKey {
     Identifier(String),
@@ -35,6 +37,7 @@ enum ReturnState<'a> {
 pub struct Env<'a> {
     store: HashMap<EnvKey, Object>,
     return_state: ReturnState<'a>,
+    parent: Option<&'a Env<'a>>,
 }
 
 impl<'a> Env<'a> {
@@ -42,7 +45,19 @@ impl<'a> Env<'a> {
         Self {
             store: HashMap::new(),
             return_state: Nothing,
+            parent: None,
         }
+    }
+
+    pub(super) fn new_extending<'b, 'c>(parent: &'b Env<'b>) -> Env<'c>
+    where
+        'c: 'b,
+    {
+        // uncomment this to see the failure
+        unimplemented!()
+        // let mut result = Self::new();
+        // result.parent = Some(parent);
+        // result
     }
 
     pub fn get_result(&self) -> Result {
@@ -64,6 +79,32 @@ impl<'a> Env<'a> {
         }
     }
 
+    // TODO rename this, possibly look for reusing things
+    pub(super) fn map_separated<F: FnOnce(Self, Object) -> Self>(self, f: F) -> Self {
+        self.map(|mut env| match env.return_state {
+            PlainObject(key) => match env.store.remove(&key) {
+                Some(obj) => f(
+                    Self {
+                        store: env.store,
+                        return_state: Nothing,
+                        parent: env.parent,
+                    },
+                    obj,
+                ),
+                _ => panic!("return state should always be valid"),
+            },
+            _ => env,
+        })
+    }
+
+    pub(super) fn with_return_from(main_env: Self, other_env: Self) -> Self {
+        main_env.map(|env| Self {
+            store: env.store,
+            return_state: other_env.return_state,
+            parent: env.parent,
+        })
+    }
+
     pub(super) fn map_return_obj<F: FnOnce(Object) -> std::result::Result<Object, Error>>(
         self,
         f: F,
@@ -82,11 +123,13 @@ impl<'a> Env<'a> {
                             Self {
                                 store: store,
                                 return_state: PlainObject(key),
+                                parent: env.parent,
                             }
                         }
                         Err(err) => Self {
                             store: store,
                             return_state: RuntimeError(err),
+                            parent: env.parent,
                         },
                     }
                 }
@@ -138,6 +181,7 @@ impl<'a> Env<'a> {
                 Self {
                     store: env.store,
                     return_state: PlainObject(key),
+                    parent: env.parent,
                 }
             } else {
                 Self {
@@ -148,6 +192,7 @@ impl<'a> Env<'a> {
                             _ => panic!("Expected a identifier key type"),
                         },
                     }),
+                    parent: env.parent,
                 }
             }
         })
@@ -162,6 +207,7 @@ impl<'a> Env<'a> {
                 PlainObject(key) => ReturningObject(key),
                 x => x,
             },
+            parent: env.parent,
         })
     }
 
@@ -174,6 +220,7 @@ impl<'a> Env<'a> {
             Self {
                 store: store,
                 return_state: PlainObject(EnvKey::Anonymous),
+                parent: env.parent,
             }
         })
     }
@@ -187,6 +234,7 @@ impl<'a> Env<'a> {
             Self {
                 store: store,
                 return_state: env.return_state,
+                parent: env.parent,
             }
         })
     }

@@ -41,6 +41,27 @@ fn test_display() {
         ),
         (
             Expression::Call {
+                function: Box::new(Expression::FunctionLiteral {
+                    params: vec!["x".to_string(), "y".to_string()],
+                    body: vec![
+                        Statement::Expression(Expression::Infix {
+                            operator: Operator::Plus,
+                            left: Box::new(Expression::Identifier("x".to_string())),
+                            right: Box::new(Expression::Identifier("y".to_string())),
+                        }),
+                        Statement::Expression(Expression::Boolean(true)),
+                    ],
+                }),
+                arguments: vec![Expression::Infix {
+                    operator: Operator::Plus,
+                    left: Box::new(Expression::Identifier("x".to_string())),
+                    right: Box::new(Expression::Identifier("y".to_string())),
+                }],
+            },
+            "fn(x, y) { (x + y), true }((x + y))",
+        ),
+        (
+            Expression::Call {
                 function: Box::new(Expression::Identifier("something".to_string())),
                 arguments: vec![Expression::Infix {
                     operator: Operator::Plus,

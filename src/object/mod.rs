@@ -1,15 +1,14 @@
-use crate::ast::{Expression, Statements};
+use crate::ast::Statements;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Object {
     Null,
     Boolean(bool),
     Integer(isize),
-    // Function {
-    //     // To be specific, this is a vec of Expression::Identifier
-    //     parameters: Vec<String>,
-    //     body: Statements,
-    // },
+    Function {
+        params: Vec<String>,
+        body: Statements,
+    },
 }
 
 const TRUE: Object = Object::Boolean(true);

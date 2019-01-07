@@ -46,7 +46,7 @@ impl Display for Operator {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Expression {
     Identifier(String),
     IntegerLiteral(usize),
@@ -114,7 +114,7 @@ fn format_vec<T: Display>(vec: &Vec<T>) -> String {
     vec_str
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Statement {
     Let(String, Expression),
     Return(Expression),

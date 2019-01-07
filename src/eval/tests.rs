@@ -234,40 +234,55 @@ fn test_let_expr_error() {
     }
 }
 
-// fn test_fn_object() {
-//     let cases = vec![(
-//         "fn(x, y) { x + y }",
-//         Object::Function {
-//             parameters: vec!["x".to_string(), "y".to_string()],
-//             body: vec![Statement::Expression(Expression::Infix {
-//                 operator: Operator::Plus,
-//                 left: Box::new(Expression::Identifier("x".to_string())),
-//                 right: Box::new(Expression::Identifier("y".to_string())),
-//             })],
-//         },
-//     )];
+#[test]
+fn test_fn_object() {
+    let cases = vec![(
+        "fn(x, y) { x + y }",
+        Object::Function {
+            params: vec!["x".to_string(), "y".to_string()],
+            body: vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Plus,
+                left: Box::new(Expression::Identifier("x".to_string())),
+                right: Box::new(Expression::Identifier("y".to_string())),
+            })],
+        },
+    )];
 
-//     for (inp, expected) in cases {
-//         test_eval(inp, expected);
-//     }
-// }
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
 
-// #[test]
-// fn test_fn_expr() {
-//     let cases = vec![
-//         ("let a = 5; a;", Object::Integer(5)),
-//         ("let a = 5 * 5; a;", Object::Integer(25)),
-//         ("let a = 5; let b = a; b;", Object::Integer(5)),
-//         (
-//             "let a = 5; let b = a; let c = a + b + 5; c;",
-//             Object::Integer(15),
-//         ),
-//     ];
+#[test]
+fn test_fn_expr() {
+    let cases = vec![
+        (
+            "let identity = fn(x) { x; }; identity(5);",
+            Object::Integer(5),
+        ),
+        // (
+        //     "let identity = fn(x) { return x; }; identity(5);",
+        //     Object::Integer(5),
+        // ),
+        // (
+        //     "let double = fn(x) { x * 2; }; double(5);",
+        //     Object::Integer(5),
+        // ),
+        // (
+        //     "let add = fn(x, y) { x + y; }; add(5, 5);",
+        //     Object::Integer(10),
+        // ),
+        // (
+        //     "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+        //     Object::Integer(20),
+        // ),
+        // ("fn(x) { x; }(5)", Object::Integer(5)),
+    ];
 
-//     for (inp, expected) in cases {
-//         test_eval(inp, expected);
-//     }
-// }
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
 
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);

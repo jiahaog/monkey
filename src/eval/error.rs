@@ -15,4 +15,8 @@ pub enum Error {
     IdentifierNotFound {
         name: String,
     },
+    CallExpressionExpectedFunction {
+        received: Object,
+    },
+    CallExpressionWrongNumArgs,
 }
