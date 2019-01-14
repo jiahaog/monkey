@@ -353,10 +353,7 @@ fn test_func_expression() {
         (
             "fn(x, y) { x + y; }",
             vec![Statement::Expression(Expression::FunctionLiteral {
-                params: vec![
-                    Expression::Identifier("x".to_string()),
-                    Expression::Identifier("y".to_string()),
-                ],
+                params: vec!["x".to_string(), "y".to_string()],
                 body: vec![Statement::Expression(Expression::Infix {
                     operator: Operator::Plus,
                     left: Box::new(Expression::Identifier("x".to_string())),
@@ -367,10 +364,7 @@ fn test_func_expression() {
         (
             "fn(x, y) { x + y; true; }",
             vec![Statement::Expression(Expression::FunctionLiteral {
-                params: vec![
-                    Expression::Identifier("x".to_string()),
-                    Expression::Identifier("y".to_string()),
-                ],
+                params: vec!["x".to_string(), "y".to_string()],
                 body: vec![
                     Statement::Expression(Expression::Infix {
                         operator: Operator::Plus,

@@ -13,7 +13,7 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn parse_function_params(&mut self) -> Result<Vec<Expression>, ParseError> {
+    fn parse_function_params(&mut self) -> Result<Vec<String>, ParseError> {
         self.lexer
             .next()
             .ok_or(ParseError {
@@ -39,16 +39,13 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn chomp_function_params(
-        &mut self,
-        mut prev: Vec<Expression>,
-    ) -> Result<Vec<Expression>, ParseError> {
+    fn chomp_function_params(&mut self, mut prev: Vec<String>) -> Result<Vec<String>, ParseError> {
         match self.lexer.peek() {
             Some(Token::RParen) => Ok(prev),
             Some(_) => match self.lexer.next() {
                 Some(Token::Comma) => self.chomp_function_params(prev),
                 Some(Token::Identifier(name)) => {
-                    prev.push(Expression::Identifier(name));
+                    prev.push(name);
                     self.chomp_function_params(prev)
                 }
                 x => Err(ParseError {

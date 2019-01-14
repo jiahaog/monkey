@@ -46,7 +46,7 @@ impl Display for Operator {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Expression {
     Identifier(String),
     IntegerLiteral(usize),
@@ -66,9 +66,7 @@ pub enum Expression {
         alternative: Statements,
     },
     FunctionLiteral {
-        // This should be of the Identifier variant only
-        // https://github.com/rust-lang/rfcs/pull/2593
-        params: Vec<Expression>,
+        params: Vec<String>,
         body: Statements,
     },
     Call {
@@ -116,7 +114,7 @@ fn format_vec<T: Display>(vec: &Vec<T>) -> String {
     vec_str
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Statement {
     Let(String, Expression),
     Return(Expression),

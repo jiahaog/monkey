@@ -1,191 +1,258 @@
-use self::EvalResult::*;
-use crate::ast::{Expression, Operator, Program, Statement, Statements};
-use crate::object::{Env, Object, NULL};
+mod env;
+mod error;
 
 #[cfg(test)]
 mod tests;
 
-type Result = std::result::Result<Object, Error>;
+use crate::ast::{Expression, Operator, Program, Statement, Statements};
+use crate::object::{Object, NULL};
 
-#[derive(Debug, PartialEq)]
-pub enum Error {
-    TypeMismatch {
-        operator: Operator,
-        left: Object,
-        right: Object,
-    },
-    UnknownOperation {
-        operator: Operator,
-        right: Object,
-    },
-    IdentifierNotFound {
-        name: String,
-    },
-}
+pub use self::env::Env;
+use self::error::Error;
+
+// TODO Avoid cloning objects in Errors
+
+type Result<'a> = std::result::Result<&'a Object, &'a Error>;
 
 impl Program {
-    pub fn evaluate(&self, env: &mut Env) -> Result {
-        match self.eval(env) {
-            Return(object) => Ok(object),
-            Raw(object) => Ok(object),
-            RuntimeError(err) => Err(err),
-        }
+    pub fn evaluate<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b> {
+        self.eval(env)
     }
 }
 
 trait Eval {
-    fn eval(&self, env: &mut Env) -> EvalResult;
-}
-
-// Internal evaluation result for short circuit of return statements and errors
-#[derive(Debug)]
-enum EvalResult {
-    Raw(Object),
-    Return(Object),
-    RuntimeError(Error),
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a;
 }
 
 impl Eval for Program {
-    fn eval(&self, env: &mut Env) -> EvalResult {
-        match self.statements.eval(env) {
-            // Unwrap return statement
-            Return(x) => Raw(x),
-            x => x,
-        }
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
+        self.statements.eval(env)
     }
 }
 
 impl Eval for Statement {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
         match self {
-            Statement::Let(identifier, expr) => match expr.eval(env) {
-                RuntimeError(err) => RuntimeError(err),
-                Raw(result) => {
-                    env.set(identifier.to_string(), result);
-                    Raw(NULL)
-                }
-                Return(_) => panic!(
-                    "Return not allowed here: This should have been disallowed by the parser"
-                ),
-            },
+            Statement::Let(identifier_name, expr) => expr
+                .eval(env)
+                .bind_return_value_to_store(identifier_name.to_string()),
             Statement::Expression(expr) => expr.eval(env),
-            Statement::Return(expr) => match expr.eval(env) {
-                Raw(x) => Return(x),
-                x => x,
-            },
+            Statement::Return(expr) => expr.eval(env).set_return_val_short_circuit(),
         }
     }
 }
 
 impl Eval for Statements {
-    fn eval(&self, env: &mut Env) -> EvalResult {
-        // short circuit fold (kinda inefficient)
-        self.iter().fold(Raw(NULL), |acc, statement| match acc {
-            Return(_) => acc,
-            RuntimeError(_) => acc,
-            _ => statement.eval(env),
-        })
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
+        self.iter()
+            // short circuit fold (kinda inefficient)
+            .fold(env.set_return_val(NULL), |acc, statement| {
+                acc.map(|prev_env| statement.eval(prev_env))
+            })
     }
 }
 
 impl Eval for Expression {
-    fn eval(&self, env: &mut Env) -> EvalResult {
-        // TODO there are some unimplemented cases here
+    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
+    where
+        'b: 'a,
+    {
+        println!("exp: {:#?}", self);
+        println!("env: {:#?}", env);
+        println!("");
         match self {
-            Expression::Identifier(name) => match env.get(name) {
-                Some(&val) => Raw(val),
-                None => RuntimeError(Error::IdentifierNotFound {
-                    name: name.to_string(),
-                }),
-            },
-            // TODO check if this is safe
-            Expression::IntegerLiteral(val) => Raw(Object::Integer(*val as isize)),
-            Expression::Boolean(val) => Raw(Object::from_bool_val(*val)),
-            Expression::Prefix { operator, right } => eval_prefix_expr(*operator, right.eval(env)),
+            Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
+            // // TODO check if this is safe
+            Expression::IntegerLiteral(val) => env.set_return_val(Object::Integer(*val as isize)),
+            Expression::Boolean(val) => env.set_return_val(Object::from_bool_val(*val)),
+            Expression::Prefix { operator, right } => right
+                .eval(env)
+                .map_return_obj(|result| eval_prefix_expr(*operator, result)),
             Expression::Infix {
                 operator,
                 left,
                 right,
-            } => eval_infix_expr(*operator, left.eval(env), right.eval(env)),
+            } => left.eval(env).map(|left_env| {
+                let left_obj = left_env.get_result().unwrap().clone();
+
+                right
+                    .eval(left_env)
+                    .map_return_obj(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
+            }),
             Expression::If {
                 condition,
                 consequence,
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
-            x => unimplemented!("{:?}", x),
+            Expression::FunctionLiteral { params, body } => env.set_return_val(Object::Function {
+                params: params.clone(),
+                body: body.clone(),
+            }),
+            Expression::Call {
+                function,
+                arguments,
+            } => {
+                // 1. Convert the function to an object (and check if it exists)
+                // 2. Create a new child env
+                // 3. Evaluate each zip(parameter, argument) in the new child env
+                // 4. get the result of body.eval(child_env) and put it in the parent env
+
+                let env_with_func: Env = match &**function {
+                    Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
+                    Expression::FunctionLiteral { params, body } => {
+                        env.set_return_val(Object::Function {
+                            params: params.clone(),
+                            body: body.clone(),
+                        })
+                    }
+                    x => panic!("Call.function should not be of this variant: {:?}", x),
+                };
+
+                let env_with_correct_obj = env_with_func.map_return_obj(|obj| match obj {
+                    Object::Function { params: _, body: _ } => Ok(obj),
+                    unexpected_obj => Err(Error::CallExpressionExpectedFunction {
+                        received: unexpected_obj.clone(),
+                    }),
+                });
+
+                env_with_correct_obj.map(|env| {
+                    eval_multiple(env, arguments)
+                    // env.map_separated(|env, object| {
+                    //     // let child_env = eval_multiple(
+                    //     //     Env::new_extending(&env).set_return_val(object),
+                    //     //     arguments,
+                    //     // );
+
+                    //     // let return_val = child_env
+                    //     //     .get_return_hack()
+                    //     //     .expect("I didn't think this through");
+
+                    //     // env.set_return_val(return_val)
+                    // })
+                })
+            }
         }
     }
 }
 
-fn eval_prefix_expr(operator: Operator, right: EvalResult) -> EvalResult {
+fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
+    env.map_return_obj(|object| {
+        match &object {
+            Object::Function { params, body } => {
+                if arguments.len() != params.len() {
+                    println!(
+                        "params {:?}, arguments {:?} body {:?}",
+                        params, arguments, body
+                    );
+                    // TODO more information in error
+                    Err(Error::CallExpressionWrongNumArgs)
+                } else {
+                    Ok(object)
+                }
+            }
+            _ => panic!("Checks have been done earlier"),
+        }
+    })
+    .map_separated(|env, object| match object {
+        Object::Function { params, body } => {
+            let child_env = Env::new_extending(&env);
+
+            let env_with_args = eval_multiple_args(child_env, arguments, params);
+
+            let return_val = body
+                .eval(env_with_args)
+                .get_return_hack()
+                .expect("I didn't think this through");
+
+            env.set_return_val(return_val)
+        }
+        _ => panic!(),
+    })
+}
+
+fn eval_multiple_args<'a>(env: Env<'a>, args: &Vec<Expression>, params: Vec<String>) -> Env<'a> {
+    let zipped = args.iter().zip(params);
+    zipped.fold(env, |acc, (expr, param_name)| {
+        expr.eval(acc).bind_return_value_to_store(param_name)
+    })
+}
+
+fn eval_prefix_expr(operator: Operator, right: Object) -> std::result::Result<Object, Error> {
     match (operator, right) {
-        (_, RuntimeError(x)) => RuntimeError(x),
-        (_, Return(x)) => Return(x),
-        (Operator::Not, Raw(Object::Boolean(true))) => Raw(Object::from_bool_val(false)),
-        (Operator::Not, Raw(Object::Boolean(false))) => Raw(Object::from_bool_val(true)),
-        (Operator::Not, Raw(Object::Integer(_))) => Raw(Object::from_bool_val(false)),
-        (Operator::Minus, Raw(Object::Integer(val))) => Raw(Object::Integer(-val)),
-        (operator, Raw(right)) => RuntimeError(Error::UnknownOperation {
+        (Operator::Not, Object::Boolean(true)) => Ok(Object::from_bool_val(false)),
+        (Operator::Not, Object::Boolean(false)) => Ok(Object::from_bool_val(true)),
+        (Operator::Not, Object::Integer(_)) => Ok(Object::from_bool_val(false)),
+        (Operator::Minus, Object::Integer(val)) => Ok(Object::Integer(-val)),
+        (operator, right) => Err(Error::UnknownOperation {
             operator: operator,
             right: right,
         }),
     }
 }
 
-fn eval_infix_expr(operator: Operator, left: EvalResult, right: EvalResult) -> EvalResult {
+fn eval_infix_expr<'a>(
+    operator: &Operator,
+    left: Object,
+    right: Object,
+) -> std::result::Result<Object, Error> {
     match (operator, left, right) {
-        (_, RuntimeError(x), _) => RuntimeError(x),
-        (_, _, RuntimeError(x)) => RuntimeError(x),
-        (_, Return(x), _) => Return(x),
-        (_, _, Return(x)) => Return(x),
-        (Operator::Plus, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val + right_val))
+        (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val + right_val))
         }
-        (Operator::Minus, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val - right_val))
+        (Operator::Minus, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val - right_val))
         }
-        (Operator::Multiply, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val * right_val))
+        (Operator::Multiply, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val * right_val))
         }
-        (Operator::Divide, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::Integer(left_val / right_val))
+        (Operator::Divide, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::Integer(left_val / right_val))
         }
-        (Operator::LessThan, Raw(Object::Integer(left_val)), Raw(Object::Integer(right_val))) => {
-            Raw(Object::from_bool_val(left_val < right_val))
+        (Operator::LessThan, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::from_bool_val(left_val < right_val))
         }
-        (
-            Operator::GreaterThan,
-            Raw(Object::Integer(left_val)),
-            Raw(Object::Integer(right_val)),
-        ) => Raw(Object::from_bool_val(left_val > right_val)),
-        (Operator::Equal, Raw(left_val), Raw(right_val)) => {
-            Raw(Object::from_bool_val(left_val == right_val))
+        (Operator::GreaterThan, Object::Integer(left_val), Object::Integer(right_val)) => {
+            Ok(Object::from_bool_val(left_val > right_val))
         }
-        (Operator::NotEqual, Raw(left_val), Raw(right_val)) => {
-            Raw(Object::from_bool_val(left_val != right_val))
+        (Operator::Equal, left_val, right_val) => Ok(Object::from_bool_val(left_val == right_val)),
+        (Operator::NotEqual, left_val, right_val) => {
+            Ok(Object::from_bool_val(left_val != right_val))
         }
-        (operator, Raw(left), Raw(right)) => RuntimeError(Error::TypeMismatch {
-            operator: operator,
+        (operator, left, right) => Err(Error::TypeMismatch {
+            operator: *operator,
             left: left,
             right: right,
         }),
     }
 }
 
-fn eval_if_expr(
-    env: &mut Env,
-    condition: &Box<Expression>,
-    consequence: &Statements,
-    alternative: &Statements,
-) -> EvalResult {
-    match condition.eval(env) {
-        Raw(x) => {
-            if x.is_truthy() {
-                consequence.eval(env)
-            } else {
-                alternative.eval(env)
+fn eval_if_expr<'a, 'b>(
+    env: Env<'a>,
+    condition: &'b Box<Expression>,
+    consequence: &'b Statements,
+    alternative: &'b Statements,
+) -> Env<'a> {
+    condition
+        .eval(env)
+        .map(|new_env| match new_env.get_result() {
+            Ok(object) => {
+                if object.is_truthy() {
+                    consequence.eval(new_env)
+                } else {
+                    alternative.eval(new_env)
+                }
             }
-        }
-        x => x,
-    }
+            _ => new_env,
+        })
 }

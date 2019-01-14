@@ -1,7 +1,7 @@
-use crate::ast::Operator;
-use crate::eval::Error;
+use crate::ast::{Expression, Operator, Statement};
+use crate::eval::{Env, Error};
 use crate::lexer::Lexer;
-use crate::object::{Env, Object};
+use crate::object::Object;
 use crate::parser::Parser;
 
 #[test]
@@ -203,11 +203,16 @@ fn test_let_expr() {
     let cases = vec![
         ("let a = 5; a;", Object::Integer(5)),
         ("let a = 5 * 5; a;", Object::Integer(25)),
+        ("let a = 1; let b = 2; a + b", Object::Integer(3)),
+        ("let a = 1; let b = a + a; b;", Object::Integer(2)),
+        ("let a = 1; let b = a; a + b", Object::Integer(2)),
         ("let a = 5; let b = a; b;", Object::Integer(5)),
         (
             "let a = 5; let b = a; let c = a + b + 5; c;",
             Object::Integer(15),
         ),
+        // This tests for cloning of variables
+        ("let a = 1; let b = a; let a = 2; b", Object::Integer(1)),
     ];
 
     for (inp, expected) in cases {
@@ -229,14 +234,68 @@ fn test_let_expr_error() {
     }
 }
 
+#[test]
+fn test_fn_object() {
+    let cases = vec![(
+        "fn(x, y) { x + y }",
+        Object::Function {
+            params: vec!["x".to_string(), "y".to_string()],
+            body: vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Plus,
+                left: Box::new(Expression::Identifier("x".to_string())),
+                right: Box::new(Expression::Identifier("y".to_string())),
+            })],
+        },
+    )];
+
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
+
+#[test]
+fn test_fn_expr() {
+    let cases = vec![
+        // (
+        //     "let identity = fn(x) { x; }; identity(5);",
+        //     Object::Integer(5),
+        // ),
+        // (
+        //     "let identity = fn(x) { return x; }; identity(5);",
+        //     Object::Integer(5),
+        // ),
+        // (
+        //     "let double = fn(x) { x * 2; }; double(5);",
+        //     Object::Integer(10),
+        // ),
+        (
+            "let double = fn(x) { x * 2; }; double(double(2));",
+            Object::Integer(8),
+        ),
+        // (
+        //     "let add = fn(x, y) { x + y; }; add(5, 5);",
+        //     Object::Integer(10),
+        // ),
+        // ("fn(x) { x; }(5)", object::integer(5)),
+        // (
+        //     "let add = fn(x, y) { x + y; }; add(add(3, 4));",
+        //     Object::Integer(7),
+        // ),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
+
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
     let program = parser.parse().expect("No parse errors");
 
-    match program.evaluate(&mut Env::new()) {
-        Ok(received) => assert_eq!(expected, received),
+    match program.evaluate(Env::new()).get_result() {
+        Ok(received) => assert_eq!(&expected, received),
         Err(received) => panic!("Received {:?} was not expected", received),
     }
 }
@@ -247,8 +306,8 @@ fn test_eval_error(inp: &str, expected: Error) {
 
     let program = parser.parse().expect("No parse errors");
 
-    match program.evaluate(&mut Env::new()) {
-        Err(received) => assert_eq!(expected, received),
+    match program.evaluate(Env::new()).get_result() {
+        Err(received) => assert_eq!(&expected, received),
         Ok(received) => panic!(
             "Expected error {:?}, received result {:?}",
             expected, received
