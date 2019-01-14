@@ -75,11 +75,18 @@ impl<'a> Env<'a> {
         match &self.return_state {
             Nothing => Ok(&NULL),
             ReturningObject(key) | PlainObject(key) => Ok(self
-                .store
-                .get(key)
+                .store_get(key)
                 .expect("Return state should always be a valid key to an object")),
             RuntimeError(err) => Err(err),
             LifetimeHack(_) => unimplemented!(),
+        }
+    }
+
+    fn store_get(&self, key: &EnvKey) -> Option<&Object> {
+        match (self.store.get(key), self.parent) {
+            (Some(x), _) => Some(x),
+            (None, Some(parent)) => parent.store_get(key),
+            (None, None) => None,
         }
     }
 
@@ -92,8 +99,8 @@ impl<'a> Env<'a> {
 
     // TODO rename this, possibly look for reusing things
     pub(super) fn map_separated<F: FnOnce(Self, Object) -> Self>(self, f: F) -> Self {
-        self.map(|mut env| match env.return_state {
-            PlainObject(key) => match env.store.remove(&key) {
+        self.map(|env| match env.return_state {
+            PlainObject(key) => match env.store.get(&key).cloned() {
                 Some(obj) => f(
                     Self {
                         store: env.store,
@@ -113,6 +120,7 @@ impl<'a> Env<'a> {
         f: F,
     ) -> Self {
         self.map(|env| {
+            println!("aaaa {:?}", env);
             let mut store = env.store;
 
             match env.return_state {
@@ -163,8 +171,7 @@ impl<'a> Env<'a> {
                     // '''
                     // This should be fixable by storing our objects in the hashmap using RC
                     let obj = env
-                        .store
-                        .get(key)
+                        .store_get(key)
                         .expect("Return state should be a key to a valid object")
                         .clone();
 
@@ -175,12 +182,20 @@ impl<'a> Env<'a> {
         })
     }
 
+    fn store_contains_key(&self, key: &EnvKey) -> bool {
+        match (self.store.contains_key(key), self.parent) {
+            (true, _) => true,
+            (false, Some(parent)) => parent.store_contains_key(key),
+            (false, None) => false,
+        }
+    }
+
     // Sets the object named as name as the return val
     pub(super) fn set_return_val_from_name(self, name: String) -> Self {
         self.map(|env| {
             let key = EnvKey::Identifier(name);
 
-            if env.store.contains_key(&key) {
+            if env.store_contains_key(&key) {
                 Self {
                     store: env.store,
                     return_state: PlainObject(key),

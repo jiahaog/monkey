@@ -68,6 +68,9 @@ impl Eval for Expression {
     where
         'b: 'a,
     {
+        println!("exp: {:#?}", self);
+        println!("env: {:#?}", env);
+        println!("");
         match self {
             Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
             // // TODO check if this is safe
@@ -124,18 +127,19 @@ impl Eval for Expression {
                 });
 
                 env_with_correct_obj.map(|env| {
-                    env.map_separated(|env, object| {
-                        let child_env = eval_multiple(
-                            Env::new_extending(&env).set_return_val(object),
-                            arguments,
-                        );
+                    eval_multiple(env, arguments)
+                    // env.map_separated(|env, object| {
+                    //     // let child_env = eval_multiple(
+                    //     //     Env::new_extending(&env).set_return_val(object),
+                    //     //     arguments,
+                    //     // );
 
-                        let return_val = child_env
-                            .get_return_hack()
-                            .expect("I didn't think this through");
+                    //     // let return_val = child_env
+                    //     //     .get_return_hack()
+                    //     //     .expect("I didn't think this through");
 
-                        env.set_return_val(return_val)
-                    })
+                    //     // env.set_return_val(return_val)
+                    // })
                 })
             }
         }
@@ -147,6 +151,10 @@ fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
         match &object {
             Object::Function { params, body } => {
                 if arguments.len() != params.len() {
+                    println!(
+                        "params {:?}, arguments {:?} body {:?}",
+                        params, arguments, body
+                    );
                     // TODO more information in error
                     Err(Error::CallExpressionWrongNumArgs)
                 } else {
@@ -158,8 +166,16 @@ fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
     })
     .map_separated(|env, object| match object {
         Object::Function { params, body } => {
-            let env_with_args = eval_multiple_args(env, arguments, params);
-            body.eval(env_with_args)
+            let child_env = Env::new_extending(&env);
+
+            let env_with_args = eval_multiple_args(child_env, arguments, params);
+
+            let return_val = body
+                .eval(env_with_args)
+                .get_return_hack()
+                .expect("I didn't think this through");
+
+            env.set_return_val(return_val)
         }
         _ => panic!(),
     })
