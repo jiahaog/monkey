@@ -4,19 +4,13 @@ use super::Result;
 use crate::object::{Object, NULL};
 use std::collections::HashMap;
 
-// TODO reduce number of panics
-
-#[derive(Hash, Eq, PartialEq, Clone, Debug)]
-enum EnvKey {
-    Identifier(String),
-    Anonymous,
-}
+// TODO RC instead of clone
 
 #[derive(Debug)]
 enum ReturnState<'a> {
     Nothing,
-    PlainObject(EnvKey),
-    ReturningObject(EnvKey),
+    PlainObject(Object),
+    ReturningObject(Object),
     RuntimeError(Error),
     // TODO remove this once we are sure we don't need liftimes in Env
     LifetimeHack(&'a str),
@@ -35,7 +29,7 @@ enum ReturnState<'a> {
 // - Methods should preserve immutability
 #[derive(Debug)]
 pub struct Env<'a> {
-    store: HashMap<EnvKey, Object>,
+    store: HashMap<String, Object>,
     return_state: ReturnState<'a>,
     parent: Option<&'a Env<'a>>,
 }
@@ -49,6 +43,15 @@ impl<'a> Env<'a> {
         }
     }
 
+    pub fn get_result(&self) -> Result {
+        match &self.return_state {
+            Nothing => Ok(&NULL),
+            ReturningObject(object) | PlainObject(object) => Ok(object),
+            RuntimeError(err) => Err(err),
+            LifetimeHack(_) => unimplemented!(),
+        }
+    }
+
     pub(super) fn new_extending<'b>(parent: &'b Env<'b>) -> Env<'a>
     where
         'b: 'a,
@@ -58,35 +61,12 @@ impl<'a> Env<'a> {
         result
     }
 
-    // TODO fix this
-    pub fn get_return_hack(mut self) -> std::result::Result<Object, Error> {
+    pub(super) fn get_result_owned(self) -> std::result::Result<Object, Error> {
         match self.return_state {
             Nothing => Ok(NULL),
-            ReturningObject(key) | PlainObject(key) => Ok(self
-                .store
-                .remove(&key)
-                .expect("Return state should always be a valid key to an object")),
-            RuntimeError(err) => panic!("{:?} err", err),
-            LifetimeHack(_) => unimplemented!(),
-        }
-    }
-
-    pub fn get_result(&self) -> Result {
-        match &self.return_state {
-            Nothing => Ok(&NULL),
-            ReturningObject(key) | PlainObject(key) => Ok(self
-                .store_get(key)
-                .expect("Return state should always be a valid key to an object")),
+            ReturningObject(obj) | PlainObject(obj) => Ok(obj),
             RuntimeError(err) => Err(err),
             LifetimeHack(_) => unimplemented!(),
-        }
-    }
-
-    fn store_get(&self, key: &EnvKey) -> Option<&Object> {
-        match (self.store.get(key), self.parent) {
-            (Some(x), _) => Some(x),
-            (None, Some(parent)) => parent.store_get(key),
-            (None, None) => None,
         }
     }
 
@@ -99,18 +79,15 @@ impl<'a> Env<'a> {
 
     // TODO rename this, possibly look for reusing things
     pub(super) fn map_separated<F: FnOnce(Self, Object) -> Self>(self, f: F) -> Self {
-        self.map(|env| match env.return_state {
-            PlainObject(key) => match env.store.get(&key).cloned() {
-                Some(obj) => f(
-                    Self {
-                        store: env.store,
-                        return_state: Nothing,
-                        parent: env.parent,
-                    },
-                    obj,
-                ),
-                _ => panic!("return state should always be valid"),
-            },
+        self.map(|env| match &env.return_state {
+            PlainObject(obj) => f(
+                Self {
+                    store: env.store,
+                    return_state: Nothing,
+                    parent: env.parent,
+                },
+                obj.clone(),
+            ),
             _ => env,
         })
     }
@@ -119,100 +96,41 @@ impl<'a> Env<'a> {
         self,
         f: F,
     ) -> Self {
-        self.map(|env| {
-            println!("aaaa {:?}", env);
-            let mut store = env.store;
-
-            match env.return_state {
-                PlainObject(key) => {
-                    let obj = store.remove(&key).expect("State should be valid key");
-                    match f(obj) {
-                        Ok(new_obj) => {
-                            // Not sure if we can avoid cloning here, need to think this through
-                            store.insert(key.clone(), new_obj);
-
-                            Self {
-                                store: store,
-                                return_state: PlainObject(key),
-                                parent: env.parent,
-                            }
-                        }
-                        Err(err) => Self {
-                            store: store,
-                            return_state: RuntimeError(err),
-                            parent: env.parent,
-                        },
-                    }
-                }
-                _ => panic!("should be handled by map"),
-            }
+        self.map(|env| Self {
+            store: env.store,
+            return_state: match env.return_state {
+                PlainObject(object) => match f(object) {
+                    Ok(new_obj) => PlainObject(new_obj),
+                    Err(err) => RuntimeError(err),
+                },
+                x => x,
+            },
+            parent: env.parent,
         })
     }
 
     // Stores the anonymous return val as the named string
     pub(super) fn bind_return_value_to_store(self, name: String) -> Self {
-        self.map(|mut env| match &env.return_state {
-            PlainObject(key) => match key {
-                EnvKey::Anonymous => {
-                    let obj = env.store.remove(&EnvKey::Anonymous);
-
-                    env.set_key_val(
-                        name,
-                        obj.expect("Return state should always be a key to a valid object"),
-                    )
-                }
-                EnvKey::Identifier(_) => {
-                    // TODO Fix this, this duplicates the object instead of using a reference to
-                    // the original identifier
-                    // '''
-                    // let a = 5;
-                    // let b = a;
-                    // b
-                    // '''
-                    // This should be fixable by storing our objects in the hashmap using RC
-                    let obj = env
-                        .store_get(key)
-                        .expect("Return state should be a key to a valid object")
-                        .clone();
-
-                    env.set_key_val(name, obj)
-                }
-            },
-            _ => panic!("This should have been handled by map"),
+        self.map_store(|mut store, object| {
+            store.insert(name, object);
+            store
         })
-    }
-
-    fn store_contains_key(&self, key: &EnvKey) -> bool {
-        match (self.store.contains_key(key), self.parent) {
-            (true, _) => true,
-            (false, Some(parent)) => parent.store_contains_key(key),
-            (false, None) => false,
-        }
     }
 
     // Sets the object named as name as the return val
     pub(super) fn set_return_val_from_name(self, name: String) -> Self {
-        self.map(|env| {
-            let key = EnvKey::Identifier(name);
+        self.map(|env| match env.store_get(&name) {
+            Some(obj) => Self {
+                store: env.store,
+                return_state: PlainObject(obj),
+                parent: env.parent,
+            },
 
-            if env.store_contains_key(&key) {
-                Self {
-                    store: env.store,
-                    return_state: PlainObject(key),
-                    parent: env.parent,
-                }
-            } else {
-                Self {
-                    store: env.store,
-                    return_state: RuntimeError(Error::IdentifierNotFound {
-                        name: match key {
-                            EnvKey::Identifier(name) => name,
-                            _ => panic!("Expected a identifier key type"),
-                        },
-                    }),
-                    parent: env.parent,
-                }
-            }
+            None => Self {
+                store: env.store,
+                return_state: RuntimeError(Error::IdentifierNotFound { name: name }),
+                parent: env.parent,
+            },
         })
     }
 
@@ -230,30 +148,43 @@ impl<'a> Env<'a> {
     }
 
     pub(super) fn set_return_val(self, obj: Object) -> Self {
-        self.map(|env| {
-            let mut store = env.store;
-
-            store.insert(EnvKey::Anonymous, obj);
-
-            Self {
-                store: store,
-                return_state: PlainObject(EnvKey::Anonymous),
-                parent: env.parent,
-            }
+        self.map(|env| Self {
+            store: env.store,
+            return_state: PlainObject(obj),
+            parent: env.parent,
         })
     }
 
-    fn set_key_val(self, name: String, obj: Object) -> Self {
-        self.map(|env| {
-            let mut store = env.store;
-
-            store.insert(EnvKey::Identifier(name), obj);
-
-            Self {
-                store: store,
-                return_state: env.return_state,
-                parent: env.parent,
-            }
+    pub(super) fn set_return_result(self, result: std::result::Result<Object, Error>) -> Self {
+        self.map(|env| Self {
+            store: env.store,
+            return_state: match result {
+                Ok(obj) => PlainObject(obj),
+                Err(err) => RuntimeError(err),
+            },
+            parent: env.parent,
         })
+    }
+
+    fn map_store<F: FnOnce(HashMap<String, Object>, Object) -> HashMap<String, Object>>(
+        self,
+        f: F,
+    ) -> Self {
+        self.map(|env| Self {
+            store: match &env.return_state {
+                PlainObject(obj) => f(env.store, obj.clone()),
+                _ => env.store,
+            },
+            return_state: env.return_state,
+            parent: env.parent,
+        })
+    }
+
+    fn store_get(&self, key: &String) -> Option<Object> {
+        match (self.store.get(key).cloned(), self.parent) {
+            (Some(x), _) => Some(x),
+            (None, Some(parent)) => parent.store_get(key),
+            (None, None) => None,
+        }
     }
 }

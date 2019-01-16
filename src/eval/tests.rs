@@ -256,31 +256,31 @@ fn test_fn_object() {
 #[test]
 fn test_fn_expr() {
     let cases = vec![
-        // (
-        //     "let identity = fn(x) { x; }; identity(5);",
-        //     Object::Integer(5),
-        // ),
-        // (
-        //     "let identity = fn(x) { return x; }; identity(5);",
-        //     Object::Integer(5),
-        // ),
-        // (
-        //     "let double = fn(x) { x * 2; }; double(5);",
-        //     Object::Integer(10),
-        // ),
+        (
+            "let identity = fn(x) { x; }; identity(5);",
+            Object::Integer(5),
+        ),
+        (
+            "let identity = fn(x) { return x; }; identity(5);",
+            Object::Integer(5),
+        ),
+        (
+            "let double = fn(x) { x * 2; }; double(5);",
+            Object::Integer(10),
+        ),
+        (
+            "let add = fn(x, y) { x + y; }; add(5, 5);",
+            Object::Integer(10),
+        ),
+        ("fn(x) { x; }(5)", Object::Integer(5)),
         (
             "let double = fn(x) { x * 2; }; double(double(2));",
             Object::Integer(8),
         ),
-        // (
-        //     "let add = fn(x, y) { x + y; }; add(5, 5);",
-        //     Object::Integer(10),
-        // ),
-        // ("fn(x) { x; }(5)", object::integer(5)),
-        // (
-        //     "let add = fn(x, y) { x + y; }; add(add(3, 4));",
-        //     Object::Integer(7),
-        // ),
+        (
+            "let add = fn(x, y) { x + y; }; add(add(3, 4), add(1, 2));",
+            Object::Integer(10),
+        ),
     ];
 
     for (inp, expected) in cases {
