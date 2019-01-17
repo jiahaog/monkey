@@ -7,13 +7,11 @@ use std::collections::HashMap;
 // TODO RC instead of clone
 
 #[derive(Debug, Clone)]
-enum ReturnState<'a> {
+enum ReturnState {
     Nothing,
     PlainObject(Object),
     ReturningObject(Object),
     RuntimeError(Error),
-    // TODO remove this once we are sure we don't need liftimes in Env
-    LifetimeHack(&'a str),
 }
 
 // Key design notes: a state variable is used to key the "last", or final object in the current
@@ -28,13 +26,13 @@ enum ReturnState<'a> {
 // - Types used by this object should not be exposed to consumers even in the same module
 // - Methods should preserve immutability
 #[derive(Debug, Clone)]
-pub struct Env<'a> {
+pub struct Env {
     store: HashMap<String, Object>,
-    return_state: ReturnState<'a>,
-    parent: Option<Box<Env<'a>>>,
+    return_state: ReturnState,
+    parent: Option<Box<Env>>,
 }
 
-impl<'a> Env<'a> {
+impl Env {
     pub fn new() -> Self {
         Self {
             store: HashMap::new(),
@@ -48,14 +46,10 @@ impl<'a> Env<'a> {
             Nothing => Ok(NULL),
             ReturningObject(object) | PlainObject(object) => Ok(object.clone()),
             RuntimeError(err) => Err(err.clone()),
-            LifetimeHack(_) => unimplemented!(),
         }
     }
 
-    pub(super) fn new_extending<'b>(parent: Env<'b>) -> Env<'a>
-    where
-        'b: 'a,
-    {
+    pub(super) fn new_extending(parent: Env) -> Env {
         let mut result = Self::new();
         result.parent = Some(Box::new(parent));
         result
@@ -66,7 +60,6 @@ impl<'a> Env<'a> {
             Nothing => Ok(NULL),
             ReturningObject(obj) | PlainObject(obj) => Ok(obj),
             RuntimeError(err) => Err(err),
-            LifetimeHack(_) => unimplemented!(),
         }
     }
 

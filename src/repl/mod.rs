@@ -26,11 +26,11 @@ where
     }
 }
 
-fn handle_input<'a, W>(
-    env: Env<'a>,
+fn handle_input<W>(
+    env: Env,
     output: &mut W,
     s: String,
-) -> (Env<'a>, std::result::Result<usize, std::io::Error>)
+) -> (Env, std::result::Result<usize, std::io::Error>)
 where
     W: Write,
 {

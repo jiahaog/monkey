@@ -16,31 +16,23 @@ use self::error::Error;
 type Result<'a> = std::result::Result<Object, Error>;
 
 impl Program {
-    pub fn evaluate<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b> {
+    pub fn evaluate(&self, env: Env) -> Env {
         self.eval(env)
     }
 }
 
 trait Eval {
-    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
-    where
-        'b: 'a;
+    fn eval(&self, env: Env) -> Env;
 }
 
 impl Eval for Program {
-    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
-    where
-        'b: 'a,
-    {
+    fn eval(&self, env: Env) -> Env {
         self.statements.eval(env)
     }
 }
 
 impl Eval for Statement {
-    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
-    where
-        'b: 'a,
-    {
+    fn eval(&self, env: Env) -> Env {
         match self {
             Statement::Let(identifier_name, expr) => expr
                 .eval(env)
@@ -52,10 +44,7 @@ impl Eval for Statement {
 }
 
 impl Eval for Statements {
-    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
-    where
-        'b: 'a,
-    {
+    fn eval(&self, env: Env) -> Env {
         self.iter()
             .fold(env.set_return_val(NULL), |acc, statement| {
                 // Calling map will do nothing if the acc is already in a returning or error state.
@@ -66,10 +55,7 @@ impl Eval for Statements {
 }
 
 impl Eval for Expression {
-    fn eval<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b>
-    where
-        'b: 'a,
-    {
+    fn eval(&self, env: Env) -> Env {
         // println!("env {:#?}\nexpr {:#?}\n", env, self);
 
         match self {
@@ -136,7 +122,7 @@ impl Eval for Expression {
 }
 
 // TODO clean this up
-fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
+fn eval_multiple(env: Env, arguments: &Vec<Expression>) -> Env {
     env.map_return_obj(|object| {
         // Check parameters
         match &object {
@@ -169,7 +155,7 @@ fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
     })
 }
 
-fn eval_multiple_args<'a>(env: Env<'a>, args: &Vec<Expression>, params: Vec<String>) -> Env<'a> {
+fn eval_multiple_args(env: Env, args: &Vec<Expression>, params: Vec<String>) -> Env {
     let zipped = args.iter().zip(params);
     zipped.fold(env, |acc, (expr, param_name)| {
         expr.eval(acc).bind_return_value_to_store(param_name)
@@ -226,11 +212,11 @@ fn eval_infix_expr<'a>(
 }
 
 fn eval_if_expr<'a, 'b>(
-    env: Env<'a>,
+    env: Env,
     condition: &'b Box<Expression>,
     consequence: &'b Statements,
     alternative: &'b Statements,
-) -> Env<'a> {
+) -> Env {
     condition
         .eval(env)
         .map(|new_env| match new_env.get_result() {
