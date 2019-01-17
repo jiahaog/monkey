@@ -1,7 +1,6 @@
 use crate::ast::{Expression, Operator, Statement};
-use crate::eval::{Env, Error};
+use crate::eval::{Env, Error, Object};
 use crate::lexer::Lexer;
-use crate::object::Object;
 use crate::parser::Parser;
 
 #[test]
@@ -288,6 +287,39 @@ fn test_fn_expr() {
     }
 }
 
+#[test]
+fn test_enclosing_env() {
+    let inp = "
+        let first = 10;
+        let second = 10;
+        let third = 10;
+
+        let ourFunction = fn(first) {
+          let second = 20;
+
+          first + second + third;
+        };
+
+        ourFunction(20) + first + second;";
+
+    let expected = Object::Integer(70);
+    test_eval(inp, expected);
+}
+
+#[test]
+fn test_closures() {
+    let inp = "
+        let newAdder = fn(x) {
+          fn(y) { x + y };
+        };
+
+        let addTwo = newAdder(2);
+        addTwo(3);";
+
+    let expected = Object::Integer(5);
+    test_eval(inp, expected);
+}
+
 fn test_eval(inp: &str, expected: Object) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
@@ -295,7 +327,7 @@ fn test_eval(inp: &str, expected: Object) {
     let program = parser.parse().expect("No parse errors");
 
     match program.evaluate(Env::new()).get_result() {
-        Ok(received) => assert_eq!(&expected, received),
+        Ok(received) => assert_eq!(expected, received),
         Err(received) => panic!("Received {:?} was not expected", received),
     }
 }
@@ -307,7 +339,7 @@ fn test_eval_error(inp: &str, expected: Error) {
     let program = parser.parse().expect("No parse errors");
 
     match program.evaluate(Env::new()).get_result() {
-        Err(received) => assert_eq!(&expected, received),
+        Err(received) => assert_eq!(expected, received),
         Ok(received) => panic!(
             "Expected error {:?}, received result {:?}",
             expected, received

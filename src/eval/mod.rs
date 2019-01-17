@@ -1,11 +1,12 @@
 mod env;
 mod error;
+mod object;
 
 #[cfg(test)]
 mod tests;
 
+use self::object::{Object, NULL};
 use crate::ast::{Expression, Operator, Program, Statement, Statements};
-use crate::object::{Object, NULL};
 
 pub use self::env::Env;
 use self::error::Error;
@@ -69,6 +70,8 @@ impl Eval for Expression {
     where
         'b: 'a,
     {
+        // println!("env {:#?}\nexpr {:#?}\n", env, self);
+
         match self {
             Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
             // // TODO check if this is safe
@@ -154,6 +157,8 @@ fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
 
             // evaluate arguments in child env
             let env_with_args = eval_multiple_args(child_env, arguments, params);
+
+            // println!("=========");
 
             // evalute body with arguments
             let return_result = body.eval(env_with_args).get_result_owned();

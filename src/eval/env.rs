@@ -1,7 +1,7 @@
 use self::ReturnState::*;
 use super::error::Error;
+use super::object::{Object, NULL};
 use super::Result;
-use crate::object::{Object, NULL};
 use std::collections::HashMap;
 
 // TODO RC instead of clone
@@ -111,9 +111,16 @@ impl<'a> Env<'a> {
 
     // Stores the anonymous return val as the named string
     pub(super) fn bind_return_value_to_store(self, name: String) -> Self {
-        self.map_store(|mut store, object| {
-            store.insert(name, object);
-            store
+        self.map(|mut env| Self {
+            store: match env.return_state {
+                PlainObject(obj) => {
+                    env.store.insert(name, obj);
+                    env.store
+                }
+                _ => env.store,
+            },
+            return_state: Nothing,
+            parent: env.parent,
         })
     }
 
