@@ -45,9 +45,9 @@ impl<'a> Env<'a> {
 
     pub fn get_result(&self) -> Result {
         match &self.return_state {
-            Nothing => Ok(&NULL),
-            ReturningObject(object) | PlainObject(object) => Ok(object),
-            RuntimeError(err) => Err(err),
+            Nothing => Ok(NULL),
+            ReturningObject(object) | PlainObject(object) => Ok(object.clone()),
+            RuntimeError(err) => Err(err.clone()),
             LifetimeHack(_) => unimplemented!(),
         }
     }

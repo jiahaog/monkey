@@ -12,7 +12,7 @@ use self::error::Error;
 
 // TODO Avoid cloning objects in Errors
 
-type Result<'a> = std::result::Result<&'a Object, &'a Error>;
+type Result<'a> = std::result::Result<Object, Error>;
 
 impl Program {
     pub fn evaluate<'a, 'b>(&'a self, env: Env<'b>) -> Env<'b> {
