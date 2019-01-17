@@ -6,6 +6,13 @@ use std::collections::HashMap;
 
 // TODO RC instead of clone
 
+// This is so that we can nest a Env inside a object for functions
+impl PartialEq for Env {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
 #[derive(Debug, Clone)]
 enum ReturnState {
     Nothing,
@@ -53,6 +60,22 @@ impl Env {
         let mut result = Self::new();
         result.parent = Some(Box::new(parent));
         result
+    }
+
+    pub(super) fn with_parent(self, parent: Env) -> Env {
+        Self {
+            store: self.store,
+            return_state: self.return_state,
+            parent: Some(Box::new(parent)),
+        }
+    }
+
+    pub fn clear_return_state(self) -> Self {
+        Self {
+            store: self.store,
+            return_state: Nothing,
+            parent: self.parent,
+        }
     }
 
     pub(super) fn get_result_owned(self) -> std::result::Result<Object, Error> {

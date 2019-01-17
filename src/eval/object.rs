@@ -9,7 +9,7 @@ pub enum Object {
     Function {
         params: Vec<String>,
         body: Statements,
-        // env: Env,
+        env: Box<Env>,
     },
 }
 

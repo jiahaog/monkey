@@ -71,6 +71,7 @@ pub enum Expression {
     },
     Call {
         // This should be of the Identifier or FunctionLiteral variant only
+        // TODO make this strongly typed
         function: Box<Expression>,
         arguments: Vec<Expression>,
     },

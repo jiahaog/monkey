@@ -244,6 +244,7 @@ fn test_fn_object() {
                 left: Box::new(Expression::Identifier("x".to_string())),
                 right: Box::new(Expression::Identifier("y".to_string())),
             })],
+            env: Box::new(Env::new()),
         },
     )];
 

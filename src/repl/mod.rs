@@ -41,7 +41,7 @@ where
             let output_str = evaluated_env.get_result();
 
             (
-                evaluated_env,
+                evaluated_env.clear_return_state(),
                 output.write(format!("{:?}\n", output_str).as_bytes()),
             )
         }

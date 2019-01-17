@@ -82,10 +82,15 @@ impl Eval for Expression {
                 consequence,
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
-            Expression::FunctionLiteral { params, body } => env.set_return_val(Object::Function {
-                params: params.clone(),
-                body: body.clone(),
-            }),
+            Expression::FunctionLiteral { params, body } => {
+                let func_env = env.clone();
+
+                env.set_return_val(Object::Function {
+                    params: params.clone(),
+                    body: body.clone(),
+                    env: Box::new(func_env),
+                })
+            }
             Expression::Call {
                 function,
                 arguments,
@@ -101,16 +106,23 @@ impl Eval for Expression {
                         .set_return_val_from_name(name.to_string())
                         // check if idenntifier points to a function
                         .map_return_obj(|obj| match obj {
-                            Object::Function { params: _, body: _ } => Ok(obj),
+                            Object::Function {
+                                params: _,
+                                body: _,
+                                env: _,
+                            } => Ok(obj),
                             unexpected_obj => Err(Error::CallExpressionExpectedFunction {
                                 received: unexpected_obj.clone(),
                             }),
                         }),
 
                     Expression::FunctionLiteral { params, body } => {
+                        let func_env = env.clone();
+
                         env.set_return_val(Object::Function {
                             params: params.clone(),
                             body: body.clone(),
+                            env: Box::new(func_env),
                         })
                     }
                     x => panic!("Call.function should not be of this variant: {:?}", x),
@@ -126,7 +138,11 @@ fn eval_multiple(env: Env, arguments: &Vec<Expression>) -> Env {
     env.map_return_obj(|object| {
         // Check parameters
         match &object {
-            Object::Function { params, body: _ } => {
+            Object::Function {
+                params,
+                body: _,
+                env: _,
+            } => {
                 if arguments.len() != params.len() {
                     // TODO more information in error
                     Err(Error::CallExpressionWrongNumArgs)
@@ -138,11 +154,18 @@ fn eval_multiple(env: Env, arguments: &Vec<Expression>) -> Env {
         }
     })
     .map_separated(|env, object| match object {
-        Object::Function { params, body } => {
+        Object::Function {
+            params,
+            body,
+            env: func_env,
+        } => {
             let child_env = Env::new_extending(env.clone());
 
             // evaluate arguments in child env
-            let env_with_args = eval_multiple_args(child_env, arguments, params);
+            //
+            // TODO handle errors from this env
+            let env_with_args =
+                eval_multiple_args(child_env, arguments, params).with_parent(*func_env);
 
             // println!("=========");
 
