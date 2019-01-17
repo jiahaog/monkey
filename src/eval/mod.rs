@@ -153,7 +153,7 @@ fn eval_multiple<'a>(env: Env<'a>, arguments: &Vec<Expression>) -> Env<'a> {
     })
     .map_separated(|env, object| match object {
         Object::Function { params, body } => {
-            let child_env = Env::new_extending(&env);
+            let child_env = Env::new_extending(env.clone());
 
             // evaluate arguments in child env
             let env_with_args = eval_multiple_args(child_env, arguments, params);

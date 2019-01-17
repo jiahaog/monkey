@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 // TODO RC instead of clone
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ReturnState<'a> {
     Nothing,
     PlainObject(Object),
@@ -27,11 +27,11 @@ enum ReturnState<'a> {
 // Rules:
 // - Types used by this object should not be exposed to consumers even in the same module
 // - Methods should preserve immutability
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Env<'a> {
     store: HashMap<String, Object>,
     return_state: ReturnState<'a>,
-    parent: Option<&'a Env<'a>>,
+    parent: Option<Box<Env<'a>>>,
 }
 
 impl<'a> Env<'a> {
@@ -52,12 +52,12 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub(super) fn new_extending<'b>(parent: &'b Env<'b>) -> Env<'a>
+    pub(super) fn new_extending<'b>(parent: Env<'b>) -> Env<'a>
     where
         'b: 'a,
     {
         let mut result = Self::new();
-        result.parent = Some(parent);
+        result.parent = Some(Box::new(parent));
         result
     }
 
@@ -188,7 +188,7 @@ impl<'a> Env<'a> {
     }
 
     fn store_get(&self, key: &String) -> Option<Object> {
-        match (self.store.get(key).cloned(), self.parent) {
+        match (self.store.get(key).cloned(), &self.parent) {
             (Some(x), _) => Some(x),
             (None, Some(parent)) => parent.store_get(key),
             (None, None) => None,
