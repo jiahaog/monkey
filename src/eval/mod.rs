@@ -6,7 +6,9 @@ mod object;
 mod tests;
 
 use self::object::{Object, NULL};
-use crate::ast::{Expression, Operator, Program, Statement, Statements};
+use crate::ast::{
+    CallFunctionExpression, Expression, Function, Operator, Program, Statement, Statements,
+};
 
 pub use self::env::Env;
 use self::error::Error;
@@ -82,7 +84,7 @@ impl Eval for Expression {
                 consequence,
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
-            Expression::FunctionLiteral { params, body } => {
+            Expression::FunctionLiteral(Function { params, body }) => {
                 let func_env = env.clone();
 
                 env.set_return_val(Object::Function {
@@ -101,8 +103,8 @@ impl Eval for Expression {
                 // 4. get the result of body.eval(child_env) and put it in the parent env
 
                 // Translate identifier or function literal to common function
-                match &**function {
-                    Expression::Identifier(name) => env
+                match function {
+                    CallFunctionExpression::Identifier(name) => env
                         .set_return_val_from_name(name.to_string())
                         // check if idenntifier points to a function
                         .map_return_obj(|obj| match obj {
@@ -116,7 +118,7 @@ impl Eval for Expression {
                             }),
                         }),
 
-                    Expression::FunctionLiteral { params, body } => {
+                    CallFunctionExpression::Literal(Function { params, body }) => {
                         let func_env = env.clone();
 
                         env.set_return_val(Object::Function {
@@ -125,7 +127,6 @@ impl Eval for Expression {
                             env: Box::new(func_env),
                         })
                     }
-                    x => panic!("Call.function should not be of this variant: {:?}", x),
                 }
                 .map(|env| eval_multiple(env, arguments))
             }

@@ -1,4 +1,4 @@
-use crate::ast::Expression;
+use crate::ast::{CallFunctionExpression, Expression, Function};
 use crate::parser::Parser;
 use crate::parser::Precedence;
 use crate::parser::{ParseError, ParseErrorExpected};
@@ -21,7 +21,16 @@ impl<'a> Parser<'a> {
                 }),
             })
             .map(|args| Expression::Call {
-                function: Box::new(function),
+                function: match function {
+                    Expression::Identifier(name) => CallFunctionExpression::Identifier(name),
+                    Expression::FunctionLiteral(Function { params, body }) => {
+                        CallFunctionExpression::Literal(Function {
+                            params: params,
+                            body: body,
+                        })
+                    },
+                    _ => panic!("The upstream parser should have determined that this can only be a identifier or function literal"),
+                },
                 arguments: args,
             })
     }

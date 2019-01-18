@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Statements};
+use crate::ast::{Expression, Function, Statements};
 use crate::parser::Parser;
 use crate::parser::{ParseError, ParseErrorExpected};
 use crate::token::Token;
@@ -7,9 +7,11 @@ impl<'a> Parser<'a> {
     pub(super) fn parse_function_expression(&mut self) -> Result<Expression, ParseError> {
         self.parse_function_params()
             .and_then(|params| self.parse_function_body().map(|body| (params, body)))
-            .map(|(params, body)| Expression::FunctionLiteral {
-                params: params,
-                body: body,
+            .map(|(params, body)| {
+                Expression::FunctionLiteral(Function {
+                    params: params,
+                    body: body,
+                })
             })
     }
 

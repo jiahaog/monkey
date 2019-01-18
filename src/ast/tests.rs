@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Operator, Statement};
+use crate::ast::{CallFunctionExpression, Expression, Function, Operator, Statement};
 
 #[test]
 fn test_display() {
@@ -26,7 +26,7 @@ fn test_display() {
             "(!(-a))",
         ),
         (
-            Expression::FunctionLiteral {
+            Expression::FunctionLiteral(Function {
                 params: vec!["x".to_string(), "y".to_string()],
                 body: vec![
                     Statement::Expression(Expression::Infix {
@@ -36,12 +36,12 @@ fn test_display() {
                     }),
                     Statement::Expression(Expression::Boolean(true)),
                 ],
-            },
+            }),
             "fn(x, y) { (x + y), true }",
         ),
         (
             Expression::Call {
-                function: Box::new(Expression::FunctionLiteral {
+                function: CallFunctionExpression::Literal(Function {
                     params: vec!["x".to_string(), "y".to_string()],
                     body: vec![
                         Statement::Expression(Expression::Infix {
@@ -62,7 +62,7 @@ fn test_display() {
         ),
         (
             Expression::Call {
-                function: Box::new(Expression::Identifier("something".to_string())),
+                function: CallFunctionExpression::Identifier("something".to_string()),
                 arguments: vec![Expression::Infix {
                     operator: Operator::Plus,
                     left: Box::new(Expression::Identifier("x".to_string())),

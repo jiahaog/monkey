@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Operator, Statement, Statements};
+use crate::ast::{Expression, Function, Operator, Statement, Statements};
 use crate::lexer::Lexer;
 use crate::parser::{ParseError, ParseErrorExpected, Parser};
 use crate::token::Token;
@@ -341,39 +341,45 @@ fn test_func_expression() {
     let cases = vec![
         (
             "fn() { x + y; }",
-            vec![Statement::Expression(Expression::FunctionLiteral {
-                params: vec![],
-                body: vec![Statement::Expression(Expression::Infix {
-                    operator: Operator::Plus,
-                    left: Box::new(Expression::Identifier("x".to_string())),
-                    right: Box::new(Expression::Identifier("y".to_string())),
-                })],
-            })],
-        ),
-        (
-            "fn(x, y) { x + y; }",
-            vec![Statement::Expression(Expression::FunctionLiteral {
-                params: vec!["x".to_string(), "y".to_string()],
-                body: vec![Statement::Expression(Expression::Infix {
-                    operator: Operator::Plus,
-                    left: Box::new(Expression::Identifier("x".to_string())),
-                    right: Box::new(Expression::Identifier("y".to_string())),
-                })],
-            })],
-        ),
-        (
-            "fn(x, y) { x + y; true; }",
-            vec![Statement::Expression(Expression::FunctionLiteral {
-                params: vec!["x".to_string(), "y".to_string()],
-                body: vec![
-                    Statement::Expression(Expression::Infix {
+            vec![Statement::Expression(Expression::FunctionLiteral(
+                Function {
+                    params: vec![],
+                    body: vec![Statement::Expression(Expression::Infix {
                         operator: Operator::Plus,
                         left: Box::new(Expression::Identifier("x".to_string())),
                         right: Box::new(Expression::Identifier("y".to_string())),
-                    }),
-                    Statement::Expression(Expression::Boolean(true)),
-                ],
-            })],
+                    })],
+                },
+            ))],
+        ),
+        (
+            "fn(x, y) { x + y; }",
+            vec![Statement::Expression(Expression::FunctionLiteral(
+                Function {
+                    params: vec!["x".to_string(), "y".to_string()],
+                    body: vec![Statement::Expression(Expression::Infix {
+                        operator: Operator::Plus,
+                        left: Box::new(Expression::Identifier("x".to_string())),
+                        right: Box::new(Expression::Identifier("y".to_string())),
+                    })],
+                },
+            ))],
+        ),
+        (
+            "fn(x, y) { x + y; true; }",
+            vec![Statement::Expression(Expression::FunctionLiteral(
+                Function {
+                    params: vec!["x".to_string(), "y".to_string()],
+                    body: vec![
+                        Statement::Expression(Expression::Infix {
+                            operator: Operator::Plus,
+                            left: Box::new(Expression::Identifier("x".to_string())),
+                            right: Box::new(Expression::Identifier("y".to_string())),
+                        }),
+                        Statement::Expression(Expression::Boolean(true)),
+                    ],
+                },
+            ))],
         ),
     ];
 

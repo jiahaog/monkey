@@ -16,36 +16,6 @@ pub struct Program {
     pub statements: Statements,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum Operator {
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Not,
-    LessThan,
-    GreaterThan,
-    Equal,
-    NotEqual,
-}
-
-impl Display for Operator {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let str_val = match self {
-            Plus => "+",
-            Minus => "-",
-            Multiply => "*",
-            Divide => "/",
-            Not => "!",
-            LessThan => "<",
-            GreaterThan => ">",
-            Equal => "==",
-            NotEqual => "!=",
-        };
-        write!(f, "{}", str_val)
-    }
-}
-
 #[derive(PartialEq, Debug, Clone)]
 pub enum Expression {
     Identifier(String),
@@ -65,14 +35,9 @@ pub enum Expression {
         consequence: Statements,
         alternative: Statements,
     },
-    FunctionLiteral {
-        params: Vec<String>,
-        body: Statements,
-    },
+    FunctionLiteral(Function),
     Call {
-        // This should be of the Identifier or FunctionLiteral variant only
-        // TODO make this strongly typed
-        function: Box<Expression>,
+        function: CallFunctionExpression,
         arguments: Vec<Expression>,
     },
 }
@@ -92,10 +57,7 @@ impl Display for Expression {
                 ref right,
             } => format!("({} {} {})", left, operator, right),
             Boolean(ref val) => val.to_string(),
-            FunctionLiteral {
-                ref params,
-                ref body,
-            } => format!("fn({}) {{ {} }}", format_vec(params), format_vec(body)),
+            FunctionLiteral(ref func) => format!("{}", func),
             Call {
                 ref function,
                 ref arguments,
@@ -128,6 +90,69 @@ impl Display for Statement {
             Let(ref name, ref expr) => format!("let {} = {}", name, expr.to_string()),
             Return(ref expr) => expr.to_string(),
             Expression(ref expr) => expr.to_string(),
+        };
+        write!(f, "{}", string_val)
+    }
+}
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum Operator {
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Not,
+    LessThan,
+    GreaterThan,
+    Equal,
+    NotEqual,
+}
+
+impl Display for Operator {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let str_val = match self {
+            Plus => "+",
+            Minus => "-",
+            Multiply => "*",
+            Divide => "/",
+            Not => "!",
+            LessThan => "<",
+            GreaterThan => ">",
+            Equal => "==",
+            NotEqual => "!=",
+        };
+        write!(f, "{}", str_val)
+    }
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct Function {
+    pub params: Vec<String>,
+    pub body: Statements,
+}
+
+impl Display for Function {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "fn({}) {{ {} }}",
+            format_vec(&self.params),
+            format_vec(&self.body)
+        )
+    }
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum CallFunctionExpression {
+    Identifier(String),
+    Literal(Function),
+}
+
+impl Display for CallFunctionExpression {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let string_val: String = match self {
+            CallFunctionExpression::Identifier(ref name) => name.to_string(),
+            CallFunctionExpression::Literal(func) => format!("{}", func),
         };
         write!(f, "{}", string_val)
     }
