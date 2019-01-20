@@ -5,6 +5,8 @@ mod object;
 #[cfg(test)]
 mod tests;
 
+use either::Either;
+
 use self::object::{Object, NULL};
 use crate::ast::{
     CallFunctionExpression, Expression, Function, Operator, Program, Statement, Statements,
@@ -14,70 +16,96 @@ pub use self::env::Env;
 use self::error::Error;
 
 // TODO Avoid cloning objects in Errors
+// TODO cleanup InternalResult -> std::result::Result conversions and vice versa
 
-type Result<'a> = std::result::Result<Object, Error>;
+type Result = std::result::Result<Object, Error>;
+
+#[derive(Debug, Clone)]
+enum ShortCircuit {
+    ReturningObject(Object),
+    RuntimeError(Error),
+}
+
+type InternalResult = Either<Object, ShortCircuit>;
 
 impl Program {
-    pub fn evaluate(&self, env: Env) -> Env {
-        self.eval(env)
+    pub fn evaluate(&self, env: &mut Env) -> Result {
+        match self.eval(env) {
+            Either::Left(object) => Ok(object),
+            Either::Right(ShortCircuit::ReturningObject(object)) => Ok(object),
+            Either::Right(ShortCircuit::RuntimeError(err)) => Err(err),
+        }
     }
 }
 
 trait Eval {
-    fn eval(&self, env: Env) -> Env;
+    fn eval(&self, env: &mut Env) -> InternalResult;
 }
 
 impl Eval for Program {
-    fn eval(&self, env: Env) -> Env {
+    fn eval(&self, env: &mut Env) -> InternalResult {
         self.statements.eval(env)
     }
 }
 
 impl Eval for Statement {
-    fn eval(&self, env: Env) -> Env {
+    fn eval(&self, env: &mut Env) -> InternalResult {
         match self {
-            Statement::Let(identifier_name, expr) => expr
-                .eval(env)
-                .bind_return_value_to_store(identifier_name.to_string()),
+            Statement::Let(name, expr) => expr.eval(env).map_left(|object| {
+                env.set(name, object.clone());
+                object
+            }),
             Statement::Expression(expr) => expr.eval(env),
-            Statement::Return(expr) => expr.eval(env).set_return_val_short_circuit(),
+            Statement::Return(expr) => expr
+                .eval(env)
+                .left_and_then(|object| Either::Right(ShortCircuit::ReturningObject(object))),
         }
     }
 }
 
 impl Eval for Statements {
-    fn eval(&self, env: Env) -> Env {
-        self.iter()
-            .fold(env.set_return_val(NULL), |acc, statement| {
-                // Calling map will do nothing if the acc is already in a returning or error state.
-                // There are possibly ways to make this exit immediately
-                acc.map(|prev_env| statement.eval(prev_env))
-            })
+    fn eval(&self, env: &mut Env) -> InternalResult {
+        self.iter().fold(Either::Left(NULL), |acc, statement| {
+            // Calling map will do nothing if the acc is already in a returning or error state.
+            // There are possibly ways to make this exit immediately
+            acc.left_and_then(|_| statement.eval(env))
+        })
     }
 }
 
 impl Eval for Expression {
-    fn eval(&self, env: Env) -> Env {
+    fn eval(&self, env: &mut Env) -> InternalResult {
         // println!("env {:#?}\nexpr {:#?}\n", env, self);
 
         match self {
-            Expression::Identifier(name) => env.set_return_val_from_name(name.to_string()),
+            Expression::Identifier(name) => match env.get(name) {
+                Some(object) => Either::Left(object),
+                None => Either::Right(ShortCircuit::RuntimeError(Error::IdentifierNotFound {
+                    name: name.to_string(),
+                })),
+            },
             // // TODO check if this is safe
-            Expression::IntegerLiteral(val) => env.set_return_val(Object::Integer(*val as isize)),
-            Expression::Boolean(val) => env.set_return_val(Object::from_bool_val(*val)),
-            Expression::Prefix { operator, right } => right
-                .eval(env)
-                .map_return_obj(|result| eval_prefix_expr(*operator, result)),
+            Expression::IntegerLiteral(val) => Either::Left(Object::Integer(*val as isize)),
+            Expression::Boolean(val) => Either::Left(Object::from_bool_val(*val)),
+            Expression::Prefix { operator, right } => {
+                right
+                    .eval(env)
+                    .left_and_then(|object| match eval_prefix_expr(*operator, object) {
+                        Ok(object) => Either::Left(object),
+                        Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
+                    })
+            }
             Expression::Infix {
                 operator,
                 left,
                 right,
-            } => left.eval(env).map(|left_env| {
-                let left_obj = left_env.get_result().expect("no errors after map").clone();
-
-                right
-                    .eval(left_env)
-                    .map_return_obj(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
+            } => left.eval(env).left_and_then(|left_obj| {
+                right.eval(env).left_and_then(|right_obj| {
+                    match eval_infix_expr(operator, left_obj, right_obj) {
+                        Ok(object) => Either::Left(object),
+                        Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
+                    }
+                })
             }),
             Expression::If {
                 condition,
@@ -87,7 +115,7 @@ impl Eval for Expression {
             Expression::FunctionLiteral(Function { params, body }) => {
                 let func_env = env.clone();
 
-                env.set_return_val(Object::Function {
+                Either::Left(Object::Function {
                     params: params.clone(),
                     body: body.clone(),
                     env: Box::new(func_env),
@@ -104,86 +132,96 @@ impl Eval for Expression {
 
                 // Translate identifier or function literal to common function
                 match function {
-                    CallFunctionExpression::Identifier(name) => env
-                        .set_return_val_from_name(name.to_string())
-                        // check if idenntifier points to a function
-                        .map_return_obj(|obj| match obj {
-                            Object::Function {
+                    CallFunctionExpression::Identifier(name) => match env.get(name) {
+                        Some(
+                            object @ Object::Function {
                                 params: _,
                                 body: _,
                                 env: _,
-                            } => Ok(obj),
-                            unexpected_obj => Err(Error::CallExpressionExpectedFunction {
-                                received: unexpected_obj.clone(),
-                            }),
-                        }),
-
+                            },
+                        ) => Either::Left(object),
+                        Some(object) => Either::Right(ShortCircuit::RuntimeError(
+                            Error::CallExpressionExpectedFunction {
+                                received: object.clone(),
+                            },
+                        )),
+                        None => {
+                            Either::Right(ShortCircuit::RuntimeError(Error::IdentifierNotFound {
+                                name: name.to_string(),
+                            }))
+                        }
+                    },
                     CallFunctionExpression::Literal(Function { params, body }) => {
                         let func_env = env.clone();
 
-                        env.set_return_val(Object::Function {
+                        Either::Left(Object::Function {
                             params: params.clone(),
                             body: body.clone(),
                             env: Box::new(func_env),
                         })
                     }
                 }
-                .map(|env| eval_multiple(env, arguments))
+                .left_and_then(|function| eval_multiple(env, function, arguments))
             }
         }
     }
 }
 
 // TODO clean this up
-fn eval_multiple(env: Env, arguments: &Vec<Expression>) -> Env {
-    env.map_return_obj(|object| {
-        // Check parameters
-        match &object {
-            Object::Function {
-                params,
-                body: _,
-                env: _,
-            } => {
-                if arguments.len() != params.len() {
-                    // TODO more information in error
-                    Err(Error::CallExpressionWrongNumArgs)
-                } else {
-                    Ok(object)
-                }
-            }
-            _ => panic!("Checks have been done earlier"),
-        }
-    })
-    .map_separated(|env, object| match object {
+// TODO make object a strict function
+fn eval_multiple(env: &mut Env, object: Object, arguments: &Vec<Expression>) -> InternalResult {
+    match object {
         Object::Function {
             params,
             body,
             env: func_env,
         } => {
-            let child_env = Env::new_extending(env.clone());
+            // check params
+            if arguments.len() != params.len() {
+                // TODO more information in error
+                Either::Right(ShortCircuit::RuntimeError(
+                    Error::CallExpressionWrongNumArgs,
+                ))
+            } else {
+                // function arguments should be evaluated with the current env
+                match eval_multiple_args(env, arguments, params) {
+                    Ok(mut child_env) => {
+                        // function body should be evaluated with the function env
+                        child_env.set_parent_env(*func_env);
 
-            // evaluate arguments in child env
-            //
-            // TODO handle errors from this env
-            let env_with_args =
-                eval_multiple_args(child_env, arguments, params).with_parent(*func_env);
-
-            // println!("=========");
-
-            // evalute body with arguments
-            let return_result = body.eval(env_with_args).get_result_owned();
-
-            env.set_return_result(return_result)
+                        body.eval(&mut child_env)
+                    }
+                    Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
+                }
+            }
         }
-        _ => panic!(),
-    })
+        _ => panic!("object parameter should be of function variant"),
+    }
 }
 
-fn eval_multiple_args(env: Env, args: &Vec<Expression>, params: Vec<String>) -> Env {
+// Creates a child env and evaluates arguments in the child env
+fn eval_multiple_args(
+    env: &Env,
+    args: &Vec<Expression>,
+    params: Vec<String>,
+) -> std::result::Result<Env, Error> {
+    let mut child_env = Env::new_extending(env.clone());
+
     let zipped = args.iter().zip(params);
-    zipped.fold(env, |acc, (expr, param_name)| {
-        expr.eval(acc).bind_return_value_to_store(param_name)
-    })
+
+    let eval_result = zipped.fold(Either::Left(NULL), |acc, (expr, param_name)| {
+        acc.left_and_then(|_| {
+            expr.eval(&mut child_env).map_left(|object| {
+                child_env.set(&param_name, object.clone());
+                object
+            })
+        })
+    });
+
+    match eval_result {
+        Either::Right(ShortCircuit::RuntimeError(err)) => Err(err),
+        _ => Ok(child_env),
+    }
 }
 
 fn eval_prefix_expr(operator: Operator, right: Object) -> std::result::Result<Object, Error> {
@@ -236,21 +274,16 @@ fn eval_infix_expr<'a>(
 }
 
 fn eval_if_expr<'a, 'b>(
-    env: Env,
+    env: &mut Env,
     condition: &'b Box<Expression>,
     consequence: &'b Statements,
     alternative: &'b Statements,
-) -> Env {
-    condition
-        .eval(env)
-        .map(|new_env| match new_env.get_result() {
-            Ok(object) => {
-                if object.is_truthy() {
-                    consequence.eval(new_env)
-                } else {
-                    alternative.eval(new_env)
-                }
-            }
-            _ => new_env,
-        })
+) -> InternalResult {
+    condition.eval(env).left_and_then(|object| {
+        if object.is_truthy() {
+            consequence.eval(env)
+        } else {
+            alternative.eval(env)
+        }
+    })
 }
