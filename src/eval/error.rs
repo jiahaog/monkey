@@ -1,5 +1,5 @@
 use super::object::Object;
-use crate::ast::Operator;
+use crate::ast::{Expression, Operator};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
@@ -18,5 +18,8 @@ pub enum Error {
     CallExpressionExpectedFunction {
         received: Object,
     },
-    CallExpressionWrongNumArgs,
+    CallExpressionWrongNumArgs {
+        params: Vec<String>,
+        arguments: Vec<Expression>,
+    },
 }
