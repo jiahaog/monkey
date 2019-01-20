@@ -8,9 +8,7 @@ mod tests;
 use either::Either;
 
 use self::object::{Object, NULL};
-use crate::ast::{
-    CallFunctionExpression, Expression, Function, Operator, Program, Statement, Statements,
-};
+use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
 
 pub use self::env::Env;
 use self::error::Error;
@@ -112,15 +110,9 @@ impl Eval for Expression {
                 consequence,
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
-            Expression::FunctionLiteral(Function { params, body }) => {
-                let func_env = env.clone();
-
-                Either::Left(Object::Function {
-                    params: params.clone(),
-                    body: body.clone(),
-                    env: Box::new(func_env),
-                })
-            }
+            Expression::FunctionLiteral(ast_func) => Either::Left(Object::Function(
+                object::Function::from_ast_fn(env.clone(), ast_func.clone()),
+            )),
             Expression::Call {
                 function,
                 arguments,
@@ -131,71 +123,55 @@ impl Eval for Expression {
                 // 4. get the result of body.eval(child_env) and put it in the parent env
 
                 // Translate identifier or function literal to common function
-                match function {
+                let func_result: std::result::Result<object::Function, Error> = match function {
                     CallFunctionExpression::Identifier(name) => match env.get(name) {
-                        Some(
-                            object @ Object::Function {
-                                params: _,
-                                body: _,
-                                env: _,
-                            },
-                        ) => Either::Left(object),
-                        Some(object) => Either::Right(ShortCircuit::RuntimeError(
-                            Error::CallExpressionExpectedFunction {
-                                received: object.clone(),
-                            },
-                        )),
-                        None => {
-                            Either::Right(ShortCircuit::RuntimeError(Error::IdentifierNotFound {
-                                name: name.to_string(),
-                            }))
-                        }
+                        Some(object) => object::Function::from_object(object),
+                        None => Err(Error::IdentifierNotFound {
+                            name: name.to_string(),
+                        }),
                     },
-                    CallFunctionExpression::Literal(Function { params, body }) => {
-                        let func_env = env.clone();
-
-                        Either::Left(Object::Function {
-                            params: params.clone(),
-                            body: body.clone(),
-                            env: Box::new(func_env),
-                        })
+                    CallFunctionExpression::Literal(ast_func) => {
+                        Ok(object::Function::from_ast_fn(env.clone(), ast_func.clone()))
                     }
+                };
+
+                match func_result {
+                    Ok(func) => eval_multiple(env, func, arguments),
+                    Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
                 }
-                .left_and_then(|function| eval_multiple(env, function, arguments))
             }
         }
     }
 }
 
 // TODO clean this up
-// TODO make object a strict function
-fn eval_multiple(env: &mut Env, object: Object, arguments: &Vec<Expression>) -> InternalResult {
-    match object {
-        Object::Function {
-            params,
-            body,
-            env: func_env,
-        } => {
-            // check params
-            if arguments.len() != params.len() {
-                // TODO more information in error
-                Either::Right(ShortCircuit::RuntimeError(
-                    Error::CallExpressionWrongNumArgs,
-                ))
-            } else {
-                // function arguments should be evaluated with the current env
-                match eval_multiple_args(env, arguments, params) {
-                    Ok(mut child_env) => {
-                        // function body should be evaluated with the function env
-                        child_env.set_parent_env(*func_env);
+fn eval_multiple(
+    env: &mut Env,
+    func: object::Function,
+    arguments: &Vec<Expression>,
+) -> InternalResult {
+    let object::Function {
+        params,
+        body,
+        env: func_env,
+    } = func;
+    // check params
+    if arguments.len() != params.len() {
+        // TODO more information in error
+        Either::Right(ShortCircuit::RuntimeError(
+            Error::CallExpressionWrongNumArgs,
+        ))
+    } else {
+        // function arguments should be evaluated with the current env
+        match eval_multiple_args(env, arguments, params) {
+            Ok(mut child_env) => {
+                // function body should be evaluated with the function env
+                child_env.set_parent_env(*func_env);
 
-                        body.eval(&mut child_env)
-                    }
-                    Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
-                }
+                body.eval(&mut child_env)
             }
+            Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
         }
-        _ => panic!("object parameter should be of function variant"),
     }
 }
 
@@ -237,7 +213,7 @@ fn eval_prefix_expr(operator: Operator, right: Object) -> std::result::Result<Ob
     }
 }
 
-fn eval_infix_expr<'a>(
+fn eval_infix_expr(
     operator: &Operator,
     left: Object,
     right: Object,
@@ -273,11 +249,11 @@ fn eval_infix_expr<'a>(
     }
 }
 
-fn eval_if_expr<'a, 'b>(
+fn eval_if_expr(
     env: &mut Env,
-    condition: &'b Box<Expression>,
-    consequence: &'b Statements,
-    alternative: &'b Statements,
+    condition: &Box<Expression>,
+    consequence: &Statements,
+    alternative: &Statements,
 ) -> InternalResult {
     condition.eval(env).left_and_then(|object| {
         if object.is_truthy() {

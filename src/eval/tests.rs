@@ -1,5 +1,5 @@
 use crate::ast::{Expression, Operator, Statement};
-use crate::eval::{Env, Error, Object};
+use crate::eval::{object, Env, Error, Object};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
@@ -237,7 +237,7 @@ fn test_let_expr_error() {
 fn test_fn_object() {
     let cases = vec![(
         "fn(x, y) { x + y }",
-        Object::Function {
+        Object::Function(object::Function {
             params: vec!["x".to_string(), "y".to_string()],
             body: vec![Statement::Expression(Expression::Infix {
                 operator: Operator::Plus,
@@ -245,7 +245,7 @@ fn test_fn_object() {
                 right: Box::new(Expression::Identifier("y".to_string())),
             })],
             env: Box::new(Env::new()),
-        },
+        }),
     )];
 
     for (inp, expected) in cases {
