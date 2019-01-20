@@ -26,13 +26,36 @@ enum ShortCircuit {
 
 type InternalResult = Either<Object, ShortCircuit>;
 
-impl Program {
-    pub fn evaluate(&self, env: &mut Env) -> Result {
-        match self.eval(env) {
+trait ToInternalResult {
+    fn to_internal_result(self) -> InternalResult;
+}
+
+impl ToInternalResult for Result {
+    fn to_internal_result(self) -> InternalResult {
+        match self {
+            Ok(object) => Either::Left(object),
+            Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
+        }
+    }
+}
+
+trait ToResult {
+    fn to_result(self) -> Result;
+}
+
+impl ToResult for InternalResult {
+    fn to_result(self) -> Result {
+        match self {
             Either::Left(object) => Ok(object),
             Either::Right(ShortCircuit::ReturningObject(object)) => Ok(object),
             Either::Right(ShortCircuit::RuntimeError(err)) => Err(err),
         }
+    }
+}
+
+impl Program {
+    pub fn evaluate(&self, env: &mut Env) -> Result {
+        self.eval(env).to_result()
     }
 }
 
@@ -85,24 +108,16 @@ impl Eval for Expression {
             // // TODO check if this is safe
             Expression::IntegerLiteral(val) => Either::Left(Object::Integer(*val as isize)),
             Expression::Boolean(val) => Either::Left(Object::from_bool_val(*val)),
-            Expression::Prefix { operator, right } => {
-                right
-                    .eval(env)
-                    .left_and_then(|object| match eval_prefix_expr(*operator, object) {
-                        Ok(object) => Either::Left(object),
-                        Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
-                    })
-            }
+            Expression::Prefix { operator, right } => right
+                .eval(env)
+                .left_and_then(|object| eval_prefix_expr(*operator, object).to_internal_result()),
             Expression::Infix {
                 operator,
                 left,
                 right,
             } => left.eval(env).left_and_then(|left_obj| {
                 right.eval(env).left_and_then(|right_obj| {
-                    match eval_infix_expr(operator, left_obj, right_obj) {
-                        Ok(object) => Either::Left(object),
-                        Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
-                    }
+                    eval_infix_expr(operator, left_obj, right_obj).to_internal_result()
                 })
             }),
             Expression::If {
@@ -117,26 +132,21 @@ impl Eval for Expression {
                 function,
                 arguments,
             } => {
-                // 1. Convert the function to an object (and check if it exists)
-                // 2. Create a new child env
-                // 3. Evaluate each zip(parameter, argument) in the new child env
-                // 4. get the result of body.eval(child_env) and put it in the parent env
-
                 // Translate identifier or function literal to common function
                 let func_result: std::result::Result<object::Function, Error> = match function {
-                    CallFunctionExpression::Identifier(name) => match env.get(name) {
-                        Some(object) => object::Function::from_object(object),
-                        None => Err(Error::IdentifierNotFound {
+                    CallFunctionExpression::Identifier(name) => env
+                        .get(name)
+                        .ok_or(Error::IdentifierNotFound {
                             name: name.to_string(),
-                        }),
-                    },
+                        })
+                        .and_then(|object| object::Function::from_object(object)),
                     CallFunctionExpression::Literal(ast_func) => {
                         Ok(object::Function::from_ast_fn(env.clone(), ast_func.clone()))
                     }
                 };
 
                 match func_result {
-                    Ok(func) => eval_multiple(env, func, arguments),
+                    Ok(func) => apply_func(env, func, arguments),
                     Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
                 }
             }
@@ -144,63 +154,7 @@ impl Eval for Expression {
     }
 }
 
-// TODO clean this up
-fn eval_multiple(
-    env: &mut Env,
-    func: object::Function,
-    arguments: &Vec<Expression>,
-) -> InternalResult {
-    let object::Function {
-        params,
-        body,
-        env: func_env,
-    } = func;
-    // check params
-    if arguments.len() != params.len() {
-        // TODO more information in error
-        Either::Right(ShortCircuit::RuntimeError(
-            Error::CallExpressionWrongNumArgs,
-        ))
-    } else {
-        // function arguments should be evaluated with the current env
-        match eval_multiple_args(env, arguments, params) {
-            Ok(mut child_env) => {
-                // function body should be evaluated with the function env
-                child_env.set_parent_env(*func_env);
-
-                body.eval(&mut child_env)
-            }
-            Err(err) => Either::Right(ShortCircuit::RuntimeError(err)),
-        }
-    }
-}
-
-// Creates a child env and evaluates arguments in the child env
-fn eval_multiple_args(
-    env: &Env,
-    args: &Vec<Expression>,
-    params: Vec<String>,
-) -> std::result::Result<Env, Error> {
-    let mut child_env = Env::new_extending(env.clone());
-
-    let zipped = args.iter().zip(params);
-
-    let eval_result = zipped.fold(Either::Left(NULL), |acc, (expr, param_name)| {
-        acc.left_and_then(|_| {
-            expr.eval(&mut child_env).map_left(|object| {
-                child_env.set(&param_name, object.clone());
-                object
-            })
-        })
-    });
-
-    match eval_result {
-        Either::Right(ShortCircuit::RuntimeError(err)) => Err(err),
-        _ => Ok(child_env),
-    }
-}
-
-fn eval_prefix_expr(operator: Operator, right: Object) -> std::result::Result<Object, Error> {
+fn eval_prefix_expr(operator: Operator, right: Object) -> Result {
     match (operator, right) {
         (Operator::Not, Object::Boolean(true)) => Ok(Object::from_bool_val(false)),
         (Operator::Not, Object::Boolean(false)) => Ok(Object::from_bool_val(true)),
@@ -213,11 +167,7 @@ fn eval_prefix_expr(operator: Operator, right: Object) -> std::result::Result<Ob
     }
 }
 
-fn eval_infix_expr(
-    operator: &Operator,
-    left: Object,
-    right: Object,
-) -> std::result::Result<Object, Error> {
+fn eval_infix_expr(operator: &Operator, left: Object, right: Object) -> Result {
     match (operator, left, right) {
         (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {
             Ok(Object::Integer(left_val + right_val))
@@ -262,4 +212,45 @@ fn eval_if_expr(
             alternative.eval(env)
         }
     })
+}
+
+fn apply_func(
+    env: &mut Env,
+    func: object::Function,
+    arguments: &Vec<Expression>,
+) -> InternalResult {
+    let object::Function {
+        params,
+        body,
+        env: func_env,
+    } = func;
+    // check params
+    if arguments.len() != params.len() {
+        // TODO more information in error
+        Either::Right(ShortCircuit::RuntimeError(
+            Error::CallExpressionWrongNumArgs,
+        ))
+    } else {
+        params
+            .into_iter()
+            .zip(arguments)
+            // evaluate arguments in the current env
+            .map(|(name, expr)| expr.eval(env).to_result().map(|object| (name, object)))
+            .collect::<std::result::Result<Vec<(String, Object)>, Error>>()
+            // bind argument results to a new env which extends the function env
+            .map(|name_and_objects| {
+                bind_objects_to_env(Env::new_extending(*func_env), name_and_objects)
+            })
+            .and_then(|mut child_env| body.eval(&mut child_env).to_result())
+            .to_internal_result()
+    }
+}
+
+fn bind_objects_to_env(env: Env, names_and_objects: Vec<(String, Object)>) -> Env {
+    names_and_objects
+        .into_iter()
+        .fold(env, |mut env, (name, object)| {
+            env.set(&name, object);
+            env
+        })
 }
