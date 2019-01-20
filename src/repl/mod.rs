@@ -10,7 +10,7 @@ where
     R: BufRead,
     W: Write,
 {
-    let mut env = Env::new();
+    let env = Env::new();
 
     loop {
         output.write(PROMPT.as_bytes()).unwrap();
@@ -19,13 +19,13 @@ where
         let mut buf = String::new();
         input.read_line(&mut buf).unwrap();
 
-        let output = handle_input(&mut env, &mut output, buf);
+        let output = handle_input(env.clone(), &mut output, buf);
         output.expect("no errors for as_bytes()");
     }
 }
 
 fn handle_input<W>(
-    env: &mut Env,
+    env: Env,
     output: &mut W,
     s: String,
 ) -> std::result::Result<usize, std::io::Error>

@@ -244,7 +244,7 @@ fn test_fn_object() {
                 left: Box::new(Expression::Identifier("x".to_string())),
                 right: Box::new(Expression::Identifier("y".to_string())),
             })],
-            env: Box::new(Env::new()),
+            env: Env::new(),
         }),
     )];
 
@@ -327,9 +327,9 @@ fn test_eval(inp: &str, expected: Object) {
 
     let program = parser.parse().expect("No parse errors");
 
-    let mut env = Env::new();
+    let env = Env::new();
 
-    match program.evaluate(&mut env) {
+    match program.evaluate(env) {
         Ok(received) => assert_eq!(expected, received),
         Err(received) => panic!("Received {:?} was not expected", received),
     }
@@ -341,9 +341,9 @@ fn test_eval_error(inp: &str, expected: Error) {
 
     let program = parser.parse().expect("No parse errors");
 
-    let mut env = Env::new();
+    let env = Env::new();
 
-    match program.evaluate(&mut env) {
+    match program.evaluate(env) {
         Err(received) => assert_eq!(expected, received),
         Ok(received) => panic!(
             "Expected error {:?}, received result {:?}",

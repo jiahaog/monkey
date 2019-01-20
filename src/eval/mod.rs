@@ -13,28 +13,26 @@ pub use self::env::Env;
 use self::error::Error;
 use self::result::{EvalResult, ToEvalResult, ToResult};
 
-// TODO Avoid cloning objects in Errors
-
 impl Program {
-    pub fn evaluate(&self, env: &mut Env) -> Result<Object, Error> {
+    pub fn evaluate(&self, env: Env) -> Result<Object, Error> {
         self.eval(env).to_result()
     }
 }
 
 trait Eval {
-    fn eval(&self, env: &mut Env) -> EvalResult;
+    fn eval(&self, env: Env) -> EvalResult;
 }
 
 impl Eval for Program {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval(&self, env: Env) -> EvalResult {
         self.statements.eval(env)
     }
 }
 
 impl Eval for Statement {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval(&self, env: Env) -> EvalResult {
         match self {
-            Statement::Let(name, expr) => expr.eval(env).map_left(|object| {
+            Statement::Let(name, expr) => expr.eval(env.clone()).map_left(|object| {
                 env.set(name, object.clone());
                 object
             }),
@@ -47,17 +45,17 @@ impl Eval for Statement {
 }
 
 impl Eval for Statements {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval(&self, env: Env) -> EvalResult {
         self.iter().fold(NULL.to_eval_result(), |acc, statement| {
             // Calling map will do nothing if the acc is already in a returning or error state.
             // There are possibly ways to make this exit immediately
-            acc.left_and_then(|_| statement.eval(env))
+            acc.left_and_then(|_| statement.eval(env.clone()))
         })
     }
 }
 
 impl Eval for Expression {
-    fn eval(&self, env: &mut Env) -> EvalResult {
+    fn eval(&self, env: Env) -> EvalResult {
         // println!("env {:#?}\nexpr {:#?}\n", env, self);
 
         match self {
@@ -78,7 +76,7 @@ impl Eval for Expression {
                 operator,
                 left,
                 right,
-            } => left.eval(env).left_and_then(|left_obj| {
+            } => left.eval(env.clone()).left_and_then(|left_obj| {
                 right.eval(env).left_and_then(|right_obj| {
                     eval_infix_expr(operator, left_obj, right_obj).to_eval_result()
                 })
@@ -164,12 +162,12 @@ fn eval_infix_expr(operator: &Operator, left: Object, right: Object) -> Result<O
 }
 
 fn eval_if_expr(
-    env: &mut Env,
+    env: Env,
     condition: &Box<Expression>,
     consequence: &Statements,
     alternative: &Statements,
 ) -> EvalResult {
-    condition.eval(env).left_and_then(|object| {
+    condition.eval(env.clone()).left_and_then(|object| {
         if object.is_truthy() {
             consequence.eval(env)
         } else {
@@ -178,12 +176,15 @@ fn eval_if_expr(
     })
 }
 
-fn apply_func(env: &mut Env, func: object::Function, arguments: &Vec<Expression>) -> EvalResult {
-    let object::Function {
+fn apply_func(
+    env: Env,
+    object::Function {
         params,
         body,
         env: func_env,
-    } = func;
+    }: object::Function,
+    arguments: &Vec<Expression>,
+) -> EvalResult {
     // check params
     if params.len() != arguments.len() {
         Error::CallExpressionWrongNumArgs {
@@ -196,13 +197,17 @@ fn apply_func(env: &mut Env, func: object::Function, arguments: &Vec<Expression>
             .into_iter()
             .zip(arguments)
             // evaluate arguments in the current env
-            .map(|(name, expr)| expr.eval(env).to_result().map(|object| (name, object)))
+            .map(|(name, expr)| {
+                expr.eval(env.clone())
+                    .to_result()
+                    .map(|object| (name, object))
+            })
             .collect::<std::result::Result<Vec<(String, Object)>, Error>>()
             // bind argument results to a new env which extends the function env
             .map(|name_and_objects| {
-                bind_objects_to_env(Env::new_extending(*func_env), name_and_objects)
+                bind_objects_to_env(Env::new_extending(func_env), name_and_objects)
             })
-            .and_then(|mut child_env| body.eval(&mut child_env).to_result())
+            .and_then(|child_env| body.eval(child_env).to_result())
             .to_eval_result()
     }
 }
@@ -210,7 +215,7 @@ fn apply_func(env: &mut Env, func: object::Function, arguments: &Vec<Expression>
 fn bind_objects_to_env(env: Env, names_and_objects: Vec<(String, Object)>) -> Env {
     names_and_objects
         .into_iter()
-        .fold(env, |mut env, (name, object)| {
+        .fold(env, |env, (name, object)| {
             env.set(&name, object);
             env
         })

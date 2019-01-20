@@ -1,5 +1,5 @@
-use super::env::Env;
 use super::error::Error;
+use super::Env;
 use crate::ast;
 use crate::ast::Statements;
 
@@ -36,7 +36,7 @@ impl Object {
 pub struct Function {
     pub params: Vec<String>,
     pub body: Statements,
-    pub env: Box<Env>,
+    pub env: Env,
 }
 
 impl Function {
@@ -55,7 +55,7 @@ impl Function {
         Self {
             params,
             body,
-            env: Box::new(env),
+            env: env,
         }
     }
 }
