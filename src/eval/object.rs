@@ -2,6 +2,7 @@ use super::error::Error;
 use super::Env;
 use crate::ast;
 use crate::ast::Statements;
+use std::fmt;
 use std::rc::Rc;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -33,7 +34,7 @@ impl Object {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Function {
     // Using Rc here makes Function cheap to clone
     pub params: Rc<Vec<String>>,
@@ -58,5 +59,16 @@ impl Function {
             body: Rc::new(body.clone()),
             env: env,
         }
+    }
+}
+
+impl fmt::Debug for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Exclude Env from output to avoid stack overflow
+        write!(
+            f,
+            "Function {{ params: {:#?}, body: {:#?}, env: <omitted> }}",
+            self.params, self.body
+        )
     }
 }

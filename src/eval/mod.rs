@@ -34,7 +34,7 @@ impl Eval for Statement {
         match self {
             Statement::Let(name, expr) => expr.eval(env.clone()).map_left(|object| {
                 env.set(name, object.clone());
-                object
+                NULL
             }),
             Statement::Expression(expr) => expr.eval(env),
             Statement::Return(expr) => expr

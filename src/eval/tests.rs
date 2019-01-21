@@ -255,6 +255,28 @@ fn test_fn_object() {
 }
 
 #[test]
+fn test_fn_let_statment_returns_null() {
+    let cases = vec![("let a = fn() { 1 }", object::NULL)];
+
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
+
+#[test]
+#[should_panic]
+fn test_fn_stack_overflow_during_fmt_debug() {
+    // NULL doesn't match the identifier for `a`, and the debug statement should be triggered by
+    // assert equals. Since functions have a rc to the environment, the debug statement will
+    // recursively call itself and stack overflow unless overriden. (Stack overflow != panic)
+    let cases = vec![("let a = fn() { 1 }; a", object::NULL)];
+
+    for (inp, expected) in cases {
+        test_eval(inp, expected);
+    }
+}
+
+#[test]
 fn test_fn_expr() {
     let cases = vec![
         (
