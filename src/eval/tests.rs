@@ -2,6 +2,7 @@ use crate::ast::{Expression, Operator, Statement};
 use crate::eval::{object, Env, Error, Object};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use std::rc::Rc;
 
 #[test]
 fn test_eval_integer() {
@@ -238,12 +239,12 @@ fn test_fn_object() {
     let cases = vec![(
         "fn(x, y) { x + y }",
         Object::Function(object::Function {
-            params: vec!["x".to_string(), "y".to_string()],
-            body: vec![Statement::Expression(Expression::Infix {
+            params: Rc::new(vec!["x".to_string(), "y".to_string()]),
+            body: Rc::new(vec![Statement::Expression(Expression::Infix {
                 operator: Operator::Plus,
                 left: Box::new(Expression::Identifier("x".to_string())),
                 right: Box::new(Expression::Identifier("y".to_string())),
-            })],
+            })]),
             env: Env::new(),
         }),
     )];

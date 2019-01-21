@@ -3,11 +3,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-// TODO RC instead of clone for objects, and maybe for objects used for errors as well
-
 type EnvRef = Rc<RefCell<_Env>>;
 
-// Wrapper type to deal with RCs and RefCells
+// Wrapper type to deal with RCs and RefCells, so that Env is cheap to clone
 #[derive(Debug)]
 pub struct Env(EnvRef);
 
@@ -45,7 +43,7 @@ impl PartialEq for Env {
 
 // This internal type doesn't know anything about RCs and RefCells
 #[derive(Debug)]
-pub struct _Env {
+struct _Env {
     store: HashMap<String, Object>,
     parent: Option<Env>,
 }

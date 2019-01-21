@@ -87,7 +87,7 @@ impl Eval for Expression {
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
             Expression::FunctionLiteral(ast_func) => {
-                Object::Function(object::Function::from_ast_fn(env.clone(), ast_func.clone()))
+                Object::Function(object::Function::from_ast_fn(env.clone(), ast_func))
                     .to_eval_result()
             }
             Expression::Call {
@@ -103,7 +103,7 @@ impl Eval for Expression {
                         })
                         .and_then(|object| object::Function::from_object(object)),
                     CallFunctionExpression::Literal(ast_func) => {
-                        Ok(object::Function::from_ast_fn(env.clone(), ast_func.clone()))
+                        Ok(object::Function::from_ast_fn(env.clone(), ast_func))
                     }
                 };
 
@@ -188,13 +188,13 @@ fn apply_func(
     // check params
     if params.len() != arguments.len() {
         Error::CallExpressionWrongNumArgs {
-            params: params,
+            params: params.to_vec(), // not really sure what to_vec() does
             arguments: arguments.clone(),
         }
         .to_eval_result()
     } else {
         params
-            .into_iter()
+            .iter()
             .zip(arguments)
             // evaluate arguments in the current env
             .map(|(name, expr)| {
@@ -202,7 +202,7 @@ fn apply_func(
                     .to_result()
                     .map(|object| (name, object))
             })
-            .collect::<std::result::Result<Vec<(String, Object)>, Error>>()
+            .collect::<std::result::Result<Vec<(&String, Object)>, Error>>()
             // bind argument results to a new env which extends the function env
             .map(|name_and_objects| {
                 bind_objects_to_env(Env::new_extending(func_env), name_and_objects)
@@ -212,11 +212,11 @@ fn apply_func(
     }
 }
 
-fn bind_objects_to_env(env: Env, names_and_objects: Vec<(String, Object)>) -> Env {
+fn bind_objects_to_env(env: Env, names_and_objects: Vec<(&String, Object)>) -> Env {
     names_and_objects
         .into_iter()
         .fold(env, |env, (name, object)| {
-            env.set(&name, object);
+            env.set(name, object);
             env
         })
 }

@@ -2,6 +2,7 @@ use super::error::Error;
 use super::Env;
 use crate::ast;
 use crate::ast::Statements;
+use std::rc::Rc;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Object {
@@ -34,8 +35,9 @@ impl Object {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
-    pub params: Vec<String>,
-    pub body: Statements,
+    // Using Rc here makes Function cheap to clone
+    pub params: Rc<Vec<String>>,
+    pub body: Rc<Statements>,
     pub env: Env,
 }
 
@@ -49,12 +51,11 @@ impl Function {
         }
     }
 
-    pub fn from_ast_fn(env: Env, func: ast::Function) -> Self {
-        let ast::Function { params, body } = func;
-
+    pub fn from_ast_fn(env: Env, ast::Function { params, body }: &ast::Function) -> Self {
+        // TODO cloning ast function fields is O(n), maybe we want to fix this
         Self {
-            params,
-            body,
+            params: Rc::new(params.clone()),
+            body: Rc::new(body.clone()),
             env: env,
         }
     }
