@@ -1,3 +1,5 @@
+export PATH := ~/.cargo/bin:$(PATH)
+
 MAKEFLAGS += --warn-undefined-variables
 SHELL := bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -7,10 +9,6 @@ SHELL := bash
 
 .PHONY: build
 build: www-build
-
-.PHONY: install
-install: rust-build www-build
-	cd monkey-web/www/ && npm install
 
 .PHONY: rust-build
 rust-build:
@@ -27,9 +25,14 @@ release: rust-release www-release
 rust-release: rust-test
 	cargo build --release
 
+.PHONY: wasm-release
+wasm-release: rust-release
+	./wasm-release
+
 .PHONY: www-release
-www-release: rust-release
-	cd monkey-web/www/ && npm run build
+www-release: rust-release wasm-release
+	# install needs to happen after the wasm build has finished
+	cd monkey-web/www/ && npm install && npm run build
 
 .PHONY: rust-test
 rust-test:
@@ -38,3 +41,8 @@ rust-test:
 .PHONY: www-watch
 www-watch: rust-build
 	cd monkey-web/www/ && npm start
+
+.PHONY: bootstrap
+bootstrap:
+	curl https://sh.rustup.rs -sSf | sh -s - -y
+	cargo install wasm-pack

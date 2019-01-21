@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Path needs to be set in order for wasm-pack to work, or there will be "no such file or directory"
+# errors. This is also why we split this out from the Makefile
+export PATH=$HOME/.cargo/bin:$PATH
+
+cd monkey-web && wasm-pack build
