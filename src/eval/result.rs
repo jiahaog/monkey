@@ -18,7 +18,7 @@ use either::Either;
 
 // This type should not be used outside of this module, but I'm not sure how to make it private
 // with the current type alias for EvalResult.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ShortCircuit {
     ReturningObject(Object),
     RuntimeError(Error),
