@@ -1,0 +1,28 @@
+{
+  "name": "monkey-www",
+  "version": "0.1.0",
+  "main": "index.js",
+  "private": true,
+  "bin": {
+    "create-wasm-app": ".bin/create-wasm-app.js"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.config.production.js",
+    "start": "webpack-dev-server"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "rust",
+    "webpack"
+  ],
+  "author": "Jia Hao Goh <jiahaog@users.noreply.github.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "monkey-web": "file:../pkg",
+    "webpack": "^4.16.3",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.5",
+    "copy-webpack-plugin": "^4.5.2"
+  }
+}
