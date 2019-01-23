@@ -19,6 +19,8 @@ inputField.addEventListener('keyup', element => {
     appendOutput(output);
 
     element.target.value = '';
+
+    stdoutContainer.lastChild.scrollIntoView();
   }
 });
 
@@ -28,3 +30,9 @@ const appendOutput = text => {
 
   stdoutContainer.appendChild(div);
 };
+
+const terminal = document.getElementById('terminal');
+
+terminal.addEventListener('click', _ => {
+  inputField.focus();
+});
