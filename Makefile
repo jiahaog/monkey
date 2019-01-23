@@ -38,11 +38,15 @@ www-release: rust-release wasm-release
 rust-test:
 	cargo test
 
-.PHONY: www-watch
-www-watch: rust-build
-	cd monkey-web/www/ && npm start
-
 .PHONY: bootstrap
 bootstrap:
 	curl https://sh.rustup.rs -sSf | sh -s - -y
 	cargo install wasm-pack
+
+.PHONY: rust-watch
+rust-watch:
+	cargo watch -x test -s 'wasm-pack build monkey-web' --ignore 'monkey-web/pkg/**/*'
+
+.PHONY: www-watch
+www-watch: rust-build
+	cd monkey-web/www/ && npm start
