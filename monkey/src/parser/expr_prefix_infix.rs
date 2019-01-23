@@ -88,7 +88,10 @@ impl<'a> Parser<'a> {
                 expected: ParseErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Return),
             }),
-            x => unimplemented!("Token: {:?}", x),
+            token => Err(ParseError {
+                expected: ParseErrorExpected::PrefixTokenOrExpression,
+                received: Some(token),
+            }),
         }
     }
 

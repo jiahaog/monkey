@@ -196,6 +196,20 @@ fn test_prefix_expressions_error() {
                 received: Some(Token::Return),
             }],
         ),
+        (
+            "123let",
+            vec![ParseError {
+                expected: ParseErrorExpected::PrefixTokenOrExpression,
+                received: Some(Token::Illegal("123let".to_string())),
+            }],
+        ),
+        (
+            "++",
+            vec![ParseError {
+                expected: ParseErrorExpected::PrefixTokenOrExpression,
+                received: Some(Token::Plus),
+            }],
+        ),
     ];
 
     for (inp, expected) in cases {
