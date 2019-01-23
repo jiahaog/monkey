@@ -1,4 +1,5 @@
 extern crate cfg_if;
+extern crate monkey;
 extern crate wasm_bindgen;
 
 mod utils;
@@ -17,11 +18,18 @@ cfg_if! {
 }
 
 #[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-}
+pub struct Interpreter(monkey::Interpreter);
 
 #[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, monkey-web!");
+impl Interpreter {
+    pub fn new() -> Self {
+        Interpreter(monkey::Interpreter::new())
+    }
+
+    pub fn evaluate(&mut self, s: String) -> String {
+        match self.0.evaluate(s) {
+            Ok(x) => x,
+            Err(x) => x,
+        }
+    }
 }
