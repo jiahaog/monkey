@@ -5,15 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <title>Monkey Interpreter</title>
+    <link rel="stylesheet" href="normalize.css">
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <h1>Monkey Interpreter</h1>
-    <span>Built in Rust and WASM</span>
+    <h1 class="title">Monkey Interpreter</h1>
 
-    <div class="terminal">
-      <div id="stdout"></div>
-      <input id="input"/>
+    <div class="container">
+      <div class="terminal">
+        <div id="stdout"></div>
+        <span>&gt;&gt;&gt; </span><input class="terminal-input" id="input" autofocus/>
+      </div>
     </div>
+
+    <div class="container">
+      <span>🦀 Rust + WASM 🦀</span>
+    </div>
+
     <script src="./bootstrap.js"></script>
   </body>
 </html>

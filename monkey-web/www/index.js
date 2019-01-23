@@ -1,5 +1,7 @@
 import { Interpreter } from 'monkey-web';
 
+const PROMPT = '>>>';
+
 const interpreter = Interpreter.new();
 
 const inputField = document.getElementById('input');
@@ -10,7 +12,7 @@ inputField.addEventListener('keyup', element => {
   if (event.key === 'Enter') {
     const input = element.target.value;
 
-    appendOutput(input);
+    appendOutput(`${PROMPT} ${input}`);
 
     const output = interpreter.evaluate(input);
 
