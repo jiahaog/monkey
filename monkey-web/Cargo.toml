@@ -2,6 +2,7 @@
 name = "monkey-web"
 version = "0.1.0"
 authors = ["Jia Hao Goh <jiahaog@users.noreply.github.com>"]
+edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
