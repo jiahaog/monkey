@@ -466,9 +466,7 @@ fn test_parser_success(inp: &str, expected: Statements) {
 
     let program = parser.parse().expect("No parse errors");
 
-    for (i, exp_statement) in expected.iter().enumerate() {
-        assert_eq!(*exp_statement, program.statements[i]);
-    }
+    assert_eq!(expected, program.statements);
 }
 
 // Currently expect only one statement which is an expression statement

@@ -2,18 +2,6 @@ use crate::lexer::Lexer;
 use crate::token::Token;
 use crate::token::Token::*;
 
-// TODO fix tests to exactly compare expected and received
-
-fn test_lexer(input: &str, expected: Vec<Token>) {
-    let mut lexer = Lexer::new(input);
-
-    for exp_token in expected {
-        if let Some(token) = lexer.next_token() {
-            assert_eq!(token, exp_token);
-        }
-    }
-}
-
 #[test]
 fn test_next_token_symbols() {
     assert_eq!(2 + 2, 4);
@@ -194,4 +182,12 @@ if (5 < 10) {
     ];
 
     test_lexer(input, expected);
+}
+
+fn test_lexer(input: &str, expected: Vec<Token>) {
+    let lexer = Lexer::new(input);
+
+    let received: Vec<Token> = lexer.collect();
+
+    assert_eq!(expected, received);
 }
