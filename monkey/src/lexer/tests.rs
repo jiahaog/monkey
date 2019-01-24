@@ -2,6 +2,8 @@ use crate::lexer::Lexer;
 use crate::token::Token;
 use crate::token::Token::*;
 
+// TODO fix tests to exactly compare expected and received
+
 fn test_lexer(input: &str, expected: Vec<Token>) {
     let mut lexer = Lexer::new(input);
 
@@ -66,6 +68,14 @@ fn test_next_token_int() {
 fn test_next_token_int_invalid() {
     let input = "12a3";
     let expected = vec![Illegal("12a3".to_string())];
+
+    test_lexer(input, expected);
+}
+
+#[test]
+fn test_unknown_symbol() {
+    let input = ".";
+    let expected = vec![Illegal(".".to_string())];
 
     test_lexer(input, expected);
 }

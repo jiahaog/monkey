@@ -26,7 +26,10 @@ impl<'a> Lexer<'a> {
                 ch if is_symbol(ch) => Some(self.next_symbol()),
                 ch if ch.is_alphabetic() => Some(self.next_identifier()),
                 ch if ch.is_digit(10) => Some(self.next_int()),
-                _ => Some(Illegal(ch.to_string())),
+                _ => {
+                    self.iter.next();
+                    Some(Illegal(ch.to_string()))
+                }
             },
             None => None,
         }
