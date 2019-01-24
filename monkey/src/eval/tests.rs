@@ -9,7 +9,7 @@ fn test_eval_integer() {
     let cases = vec![("5", Object::Integer(5))];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -38,7 +38,7 @@ fn test_eval_boolean_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -54,7 +54,7 @@ fn test_eval_prefix_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -77,7 +77,7 @@ fn test_eval_integer_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -94,7 +94,7 @@ fn test_eval_if_else_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -121,7 +121,7 @@ fn test_eval_return_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -194,7 +194,7 @@ fn test_error_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval_error(inp, expected);
+        test_eval_error(expected, inp);
     }
 }
 
@@ -216,7 +216,7 @@ fn test_let_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -230,7 +230,7 @@ fn test_let_expr_error() {
     )];
 
     for (inp, expected) in cases {
-        test_eval_error(inp, expected);
+        test_eval_error(expected, inp);
     }
 }
 
@@ -250,7 +250,7 @@ fn test_fn_object() {
     )];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -259,7 +259,7 @@ fn test_fn_let_statment_returns_null() {
     let cases = vec![("let a = fn() { 1 }", object::NULL)];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -272,7 +272,7 @@ fn test_fn_stack_overflow_during_fmt_debug() {
     let cases = vec![("let a = fn() { 1 }; a", object::NULL)];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -307,7 +307,7 @@ fn test_fn_expr() {
     ];
 
     for (inp, expected) in cases {
-        test_eval(inp, expected);
+        test_eval(expected, inp);
     }
 }
 
@@ -327,7 +327,7 @@ fn test_enclosing_env() {
         ourFunction(20) + first + second;";
 
     let expected = Object::Integer(70);
-    test_eval(inp, expected);
+    test_eval(expected, inp);
 }
 
 #[test]
@@ -341,10 +341,10 @@ fn test_closures() {
         addTwo(3);";
 
     let expected = Object::Integer(5);
-    test_eval(inp, expected);
+    test_eval(expected, inp);
 }
 
-fn test_eval(inp: &str, expected: Object) {
+fn test_eval(expected: Object, inp: &str) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
@@ -358,7 +358,7 @@ fn test_eval(inp: &str, expected: Object) {
     }
 }
 
-fn test_eval_error(inp: &str, expected: Error) {
+fn test_eval_error(expected: Error, inp: &str) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 

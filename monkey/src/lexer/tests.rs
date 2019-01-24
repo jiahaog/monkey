@@ -25,7 +25,7 @@ fn test_next_token_symbols() {
         GreaterThan,
     ];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn test_next_token_keyword() {
     let input = "let";
     let expected = vec![Let];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn test_next_token_identifier() {
     let input = "five";
     let expected = vec![Identifier("five".to_string())];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn test_next_token_int() {
     let input = "123";
     let expected = vec![Int(123)];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn test_next_token_int_invalid() {
     let input = "12a3";
     let expected = vec![Illegal("12a3".to_string())];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn test_unknown_symbol() {
     let input = ".";
     let expected = vec![Illegal(".".to_string())];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
 #[test]
@@ -121,7 +121,7 @@ let result = add(five, ten);
         Semicolon,
     ];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
 #[test]
@@ -181,10 +181,10 @@ if (5 < 10) {
         Semicolon,
     ];
 
-    test_lexer(input, expected);
+    test_lexer(expected, input);
 }
 
-fn test_lexer(input: &str, expected: Vec<Token>) {
+fn test_lexer(expected: Vec<Token>, input: &str) {
     let lexer = Lexer::new(input);
 
     let received: Vec<Token> = lexer.collect();

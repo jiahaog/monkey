@@ -9,11 +9,11 @@ fn test_let_statements() {
     let y = 10;";
 
     test_parser_success(
-        inp,
         vec![
             Statement::Let("x".to_string(), Expression::IntegerLiteral(5)),
             Statement::Let("y".to_string(), Expression::IntegerLiteral(10)),
         ],
+        inp,
     );
 }
 
@@ -23,11 +23,11 @@ fn test_return_statements() {
     return 10;";
 
     test_parser_success(
-        inp,
         vec![
             Statement::Return(Expression::IntegerLiteral(5)),
             Statement::Return(Expression::IntegerLiteral(10)),
         ],
+        inp,
     );
 }
 
@@ -35,11 +35,11 @@ fn test_return_statements() {
 fn test_let_wrong_identifier() {
     let inp = "let 1";
     test_parser_error(
-        inp,
         vec![ParseError {
             expected: ParseErrorExpected::Identifier,
             received: Some(Token::Int(1)),
         }],
+        inp,
     );
 }
 
@@ -47,11 +47,11 @@ fn test_let_wrong_identifier() {
 fn test_let_no_identifier() {
     let inp = "let";
     test_parser_error(
-        inp,
         vec![ParseError {
             expected: ParseErrorExpected::Identifier,
             received: None,
         }],
+        inp,
     );
 }
 
@@ -59,11 +59,11 @@ fn test_let_no_identifier() {
 fn test_let_missing_assign() {
     let inp = "let x 5;";
     test_parser_error(
-        inp,
         vec![ParseError {
             expected: ParseErrorExpected::Assignment,
             received: Some(Token::Int(5)),
         }],
+        inp,
     );
 }
 
@@ -71,11 +71,11 @@ fn test_let_missing_assign() {
 fn test_let_missing_expression() {
     let inp = "let x = ;";
     test_parser_error(
-        inp,
         vec![ParseError {
             expected: ParseErrorExpected::PrefixTokenOrExpression,
             received: Some(Token::Semicolon),
         }],
+        inp,
     );
 }
 
@@ -85,7 +85,6 @@ fn test_let_multiple_errors() {
     let y 10;
     let foobar = 838383;";
     test_parser_error(
-        inp,
         vec![
             ParseError {
                 expected: ParseErrorExpected::Identifier,
@@ -96,6 +95,7 @@ fn test_let_multiple_errors() {
                 received: Some(Token::Int(10)),
             },
         ],
+        inp,
     );
 }
 
@@ -104,11 +104,11 @@ fn test_identifier_expression() {
     let inp = "foo;
     bar;";
     test_parser_success(
-        inp,
         vec![
             Statement::Expression(Expression::Identifier("foo".to_string())),
             Statement::Expression(Expression::Identifier("bar".to_string())),
         ],
+        inp,
     );
 }
 
@@ -117,11 +117,11 @@ fn test_identifier_expression_no_semicolon() {
     let inp = "foo
     bar";
     test_parser_success(
-        inp,
         vec![
             Statement::Expression(Expression::Identifier("foo".to_string())),
             Statement::Expression(Expression::Identifier("bar".to_string())),
         ],
+        inp,
     );
 }
 
@@ -130,11 +130,11 @@ fn test_integer_literal_expression() {
     let inp = "1;
     2;";
     test_parser_success(
-        inp,
         vec![
             Statement::Expression(Expression::IntegerLiteral(1)),
             Statement::Expression(Expression::IntegerLiteral(2)),
         ],
+        inp,
     );
 }
 
@@ -168,7 +168,7 @@ fn test_prefix_expressions() {
     ];
 
     for (inp, expected) in cases {
-        test_parser_success(inp, expected);
+        test_parser_success(expected, inp);
     }
 }
 
@@ -213,7 +213,7 @@ fn test_prefix_expressions_error() {
     ];
 
     for (inp, expected) in cases {
-        test_parser_error(inp, expected);
+        test_parser_error(expected, inp);
     }
 }
 
@@ -287,7 +287,7 @@ fn test_infix_expressions() {
     ];
 
     for (inp, expected) in cases {
-        test_parser_success(inp, expected);
+        test_parser_success(expected, inp);
     }
 }
 
@@ -346,7 +346,7 @@ fn test_if_expression() {
     ];
 
     for (inp, expected) in cases {
-        test_parser_success(inp, expected);
+        test_parser_success(expected, inp);
     }
 }
 
@@ -398,7 +398,7 @@ fn test_func_expression() {
     ];
 
     for (inp, expected) in cases {
-        test_parser_success(inp, expected);
+        test_parser_success(expected, inp);
     }
 }
 
@@ -443,7 +443,7 @@ fn test_operator_precedence_expression() {
     ];
 
     for (inp, expected) in cases {
-        test_parser_success_with_str(inp, expected);
+        test_parser_success_with_str(expected, inp);
     }
 }
 
@@ -452,15 +452,15 @@ fn test_boolean_expression() {
     let inp = "true;
     false;";
     test_parser_success(
-        inp,
         vec![
             Statement::Expression(Expression::Boolean(true)),
             Statement::Expression(Expression::Boolean(false)),
         ],
+        inp,
     );
 }
 
-fn test_parser_success(inp: &str, expected: Statements) {
+fn test_parser_success(expected: Statements, inp: &str) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
@@ -471,7 +471,7 @@ fn test_parser_success(inp: &str, expected: Statements) {
 
 // Currently expect only one statement which is an expression statement
 // Use this instead of having to manually write out the AST
-fn test_parser_success_with_str(inp: &str, expected: &str) {
+fn test_parser_success_with_str(expected: &str, inp: &str) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
@@ -489,10 +489,10 @@ fn test_parser_success_with_str(inp: &str, expected: &str) {
     assert_eq!(expected, received);
 }
 
-fn test_parser_error(inp: &str, expected_err: Vec<ParseError>) {
+fn test_parser_error(expected_err: Vec<ParseError>, inp: &str) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
     let err = parser.parse().expect_err("Expect parse errors");
-    assert_eq!(err, expected_err);
+    assert_eq!(expected_err, err);
 }
