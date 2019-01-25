@@ -23,7 +23,7 @@ impl Env {
         self.0.borrow().get(key)
     }
 
-    pub(super) fn set(&self, key: &String, val: Object) {
+    pub(super) fn set(&self, key: String, val: Object) {
         self.0.borrow_mut().set(key, val);
     }
 }
@@ -70,7 +70,7 @@ impl _Env {
         }
     }
 
-    pub(super) fn set(&mut self, key: &String, val: Object) {
-        self.store.insert(key.to_string(), val);
+    pub(super) fn set(&mut self, key: String, val: Object) {
+        self.store.insert(key, val);
     }
 }

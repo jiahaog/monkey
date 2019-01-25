@@ -52,11 +52,11 @@ impl Function {
         }
     }
 
-    pub fn from_ast_fn(env: Env, ast::Function { params, body }: &ast::Function) -> Self {
+    pub fn from_ast_fn(env: Env, ast::Function { params, body }: ast::Function) -> Self {
         // TODO cloning ast function fields is O(n), maybe we want to fix this
         Self {
-            params: Rc::new(params.clone()),
-            body: Rc::new(body.clone()),
+            params: Rc::new(params),
+            body: Rc::new(body),
             env: env,
         }
     }

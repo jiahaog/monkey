@@ -14,26 +14,26 @@ use self::error::Error;
 use self::result::{EvalResult, ToEvalResult, ToResult};
 
 impl Program {
-    pub fn evaluate(&self, env: Env) -> Result<Object, Error> {
+    pub fn evaluate(self, env: Env) -> Result<Object, Error> {
         self.eval(env).to_result()
     }
 }
 
 trait Eval {
-    fn eval(&self, env: Env) -> EvalResult;
+    fn eval(self, env: Env) -> EvalResult;
 }
 
 impl Eval for Program {
-    fn eval(&self, env: Env) -> EvalResult {
+    fn eval(self, env: Env) -> EvalResult {
         self.statements.eval(env)
     }
 }
 
 impl Eval for Statement {
-    fn eval(&self, env: Env) -> EvalResult {
+    fn eval(self, env: Env) -> EvalResult {
         match self {
             Statement::Let(name, expr) => expr.eval(env.clone()).map_left(|object| {
-                env.set(name, object.clone());
+                env.set(name, object);
                 NULL
             }),
             Statement::Expression(expr) => expr.eval(env),
@@ -45,21 +45,22 @@ impl Eval for Statement {
 }
 
 impl Eval for Statements {
-    fn eval(&self, env: Env) -> EvalResult {
-        self.iter().fold(NULL.to_eval_result(), |acc, statement| {
-            // Calling map will do nothing if the acc is already in a returning or error state.
-            // There are possibly ways to make this exit immediately
-            acc.left_and_then(|_| statement.eval(env.clone()))
-        })
+    fn eval(self, env: Env) -> EvalResult {
+        self.into_iter()
+            .fold(NULL.to_eval_result(), |acc, statement| {
+                // Calling map will do nothing if the acc is already in a returning or error state.
+                // There are possibly ways to make this exit immediately
+                acc.left_and_then(|_| statement.eval(env.clone()))
+            })
     }
 }
 
 impl Eval for Expression {
-    fn eval(&self, env: Env) -> EvalResult {
+    fn eval(self, env: Env) -> EvalResult {
         // println!("env {:#?}\nexpr {:#?}\n", env, self);
 
         match self {
-            Expression::Identifier(name) => match env.get(name) {
+            Expression::Identifier(name) => match env.get(&name) {
                 Some(object) => object.to_eval_result(),
                 None => Error::IdentifierNotFound {
                     name: name.to_string(),
@@ -67,11 +68,11 @@ impl Eval for Expression {
                 .to_eval_result(),
             },
             // // TODO check if this is safe
-            Expression::IntegerLiteral(val) => Object::Integer(*val as isize).to_eval_result(),
-            Expression::Boolean(val) => Object::from_bool_val(*val).to_eval_result(),
+            Expression::IntegerLiteral(val) => Object::Integer(val as isize).to_eval_result(),
+            Expression::Boolean(val) => Object::from_bool_val(val).to_eval_result(),
             Expression::Prefix { operator, right } => right
                 .eval(env)
-                .left_and_then(|object| eval_prefix_expr(*operator, object).to_eval_result()),
+                .left_and_then(|object| eval_prefix_expr(operator, object).to_eval_result()),
             Expression::Infix {
                 operator,
                 left,
@@ -97,7 +98,7 @@ impl Eval for Expression {
                 // Translate identifier or function literal to common function
                 let func_result: std::result::Result<object::Function, Error> = match function {
                     CallFunctionExpression::Identifier(name) => env
-                        .get(name)
+                        .get(&name)
                         .ok_or(Error::IdentifierNotFound {
                             name: name.to_string(),
                         })
@@ -129,7 +130,7 @@ fn eval_prefix_expr(operator: Operator, right: Object) -> Result<Object, Error> 
     }
 }
 
-fn eval_infix_expr(operator: &Operator, left: Object, right: Object) -> Result<Object, Error> {
+fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> Result<Object, Error> {
     match (operator, left, right) {
         (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {
             Ok(Object::Integer(left_val + right_val))
@@ -154,7 +155,7 @@ fn eval_infix_expr(operator: &Operator, left: Object, right: Object) -> Result<O
             Ok(Object::from_bool_val(left_val != right_val))
         }
         (operator, left, right) => Err(Error::TypeMismatch {
-            operator: *operator,
+            operator: operator,
             left: left,
             right: right,
         }),
@@ -163,9 +164,9 @@ fn eval_infix_expr(operator: &Operator, left: Object, right: Object) -> Result<O
 
 fn eval_if_expr(
     env: Env,
-    condition: &Box<Expression>,
-    consequence: &Statements,
-    alternative: &Statements,
+    condition: Box<Expression>,
+    consequence: Statements,
+    alternative: Statements,
 ) -> EvalResult {
     condition.eval(env.clone()).left_and_then(|object| {
         if object.is_truthy() {
@@ -183,13 +184,13 @@ fn apply_func(
         body,
         env: func_env,
     }: object::Function,
-    arguments: &Vec<Expression>,
+    arguments: Vec<Expression>,
 ) -> EvalResult {
     // check params
     if params.len() != arguments.len() {
         Error::CallExpressionWrongNumArgs {
             params: params.to_vec(), // not really sure what to_vec() does
-            arguments: arguments.clone(),
+            arguments: arguments,
         }
         .to_eval_result()
     } else {
@@ -207,7 +208,9 @@ fn apply_func(
             .map(|name_and_objects| {
                 bind_objects_to_env(Env::new_extending(func_env), name_and_objects)
             })
-            .and_then(|child_env| body.eval(child_env).to_result())
+            // alternative to body.clone() here would be to put RC on all AST objects
+            // which is a bit too much
+            .and_then(|child_env| body.as_ref().clone().eval(child_env).to_result())
             .to_eval_result()
     }
 }
@@ -216,7 +219,7 @@ fn bind_objects_to_env(env: Env, names_and_objects: Vec<(&String, Object)>) -> E
     names_and_objects
         .into_iter()
         .fold(env, |env, (name, object)| {
-            env.set(name, object);
+            env.set(name.to_string(), object);
             env
         })
 }
