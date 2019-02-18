@@ -48,7 +48,7 @@ impl Display for Error {
                     .into_iter()
                     .map(|x| format!("{}", x))
                     .collect::<Vec<String>>()
-                    .join(", ")
+                    .join("\n")
             ),
             Error::Eval(error) => write!(f, "{}", error),
         }
