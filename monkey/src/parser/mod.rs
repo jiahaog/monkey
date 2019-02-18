@@ -9,7 +9,8 @@ mod precedence;
 #[cfg(test)]
 mod tests;
 
-use self::error::{ParseError, ParseErrorExpected};
+pub use self::error::ParseError;
+use self::error::ParseErrorExpected;
 use self::precedence::Precedence;
 use crate::ast::{Program, Statement, Statements};
 use crate::lexer::Lexer;

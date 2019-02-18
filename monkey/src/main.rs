@@ -51,7 +51,7 @@ where
     W: Write,
 {
     match interpreter.evaluate(s) {
-        Ok(object) => output.write(format!("{:?}\n", object).as_bytes()),
-        Err(e) => output.write(format!("{:?}\n", e).as_bytes()),
+        Ok(object) => output.write(format!("{}\n", object).as_bytes()),
+        Err(e) => output.write(format!("{}\n", e).as_bytes()),
     }
 }

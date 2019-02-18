@@ -344,21 +344,45 @@ fn test_closures() {
     test_eval(expected, inp);
 }
 
+#[test]
+fn test_object_function_display() {
+    let inp = "let a = fn(x, y) {
+        let b = x + y;
+        c
+    };
+
+    a
+    ";
+
+    let expected = "fn(x, y) {
+    let b = (x + y);
+    c;
+}";
+
+    match eval(inp) {
+        Err(received) => panic!("Received {:?} was not expected", received),
+        Ok(received) => assert_eq!(expected, format!("{}", received)),
+    }
+}
+
 fn test_eval(expected: Object, inp: &str) {
-    let lexer = Lexer::new(inp);
-    let parser = Parser::new(lexer);
-
-    let program = parser.parse().expect("No parse errors");
-
-    let env = Env::new();
-
-    match program.evaluate(env) {
+    match eval(inp) {
         Ok(received) => assert_eq!(expected, received),
         Err(received) => panic!("Received {:?} was not expected", received),
     }
 }
 
 fn test_eval_error(expected: Error, inp: &str) {
+    match eval(inp) {
+        Err(received) => assert_eq!(expected, received),
+        Ok(received) => panic!(
+            "Expected error {:?}, received result {:?}",
+            expected, received
+        ),
+    }
+}
+
+fn eval(inp: &str) -> Result<Object, Error> {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
@@ -366,11 +390,5 @@ fn test_eval_error(expected: Error, inp: &str) {
 
     let env = Env::new();
 
-    match program.evaluate(env) {
-        Err(received) => assert_eq!(expected, received),
-        Ok(received) => panic!(
-            "Expected error {:?}, received result {:?}",
-            expected, received
-        ),
-    }
+    program.evaluate(env)
 }

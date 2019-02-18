@@ -34,6 +34,17 @@ impl Object {
     }
 }
 
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Object::Null => write!(f, "null"),
+            Object::Boolean(val) => write!(f, "{}", val),
+            Object::Integer(val) => write!(f, "{}", val),
+            Object::Function(func) => write!(f, "{}", func),
+        }
+    }
+}
+
 #[derive(PartialEq, Clone)]
 pub struct Function {
     // Using Rc here makes Function cheap to clone
@@ -69,6 +80,19 @@ impl fmt::Debug for Function {
             f,
             "Function {{ params: {:#?}, body: {:#?}, env: <omitted> }}",
             self.params, self.body
+        )
+    }
+}
+
+impl fmt::Display for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "fn({}) {{{}}}",
+            self.params.join(", "),
+            self.body.iter().fold(String::from("\n"), |acc, line| acc
+              // 4 spaces for indentation
+                + &format!("    {};\n", line))
         )
     }
 }

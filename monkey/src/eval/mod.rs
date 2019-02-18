@@ -6,12 +6,12 @@ mod result;
 #[cfg(test)]
 mod tests;
 
-use self::object::{Object, NULL};
-use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
-
 pub use self::env::Env;
-use self::error::Error;
+pub use self::error::Error;
+pub use self::object::Object;
+use self::object::NULL;
 use self::result::{EvalResult, ToEvalResult, ToResult};
+use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
 
 impl Program {
     pub fn evaluate(self, env: Env) -> Result<Object, Error> {
