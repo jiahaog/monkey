@@ -1,4 +1,4 @@
 [build]
   publish = "monkey-web/www/dist/"
 
-  command = "make bootstrap && make release"
+  command = "make bootstrap && make"
