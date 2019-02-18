@@ -11,21 +11,23 @@ const stdoutContainer = document.getElementById('stdout');
 inputField.addEventListener('keyup', element => {
   if (event.key === 'Enter') {
     const input = element.target.value;
+    appendOutput('history-input', `${PROMPT} ${input}`);
 
-    appendOutput(`${PROMPT} ${input}`);
-
-    const output = interpreter.evaluate(input);
-
-    appendOutput(output);
+    try {
+      const output = interpreter.evaluate(input);
+      appendOutput('history-output-ok', output);
+    } catch (error) {
+      appendOutput('history-output-err', error);
+    }
 
     element.target.value = '';
-
     stdoutContainer.lastChild.scrollIntoView();
   }
 });
 
-const appendOutput = text => {
+const appendOutput = (className, text) => {
   const div = document.createElement('div');
+  div.classList.add(className);
   div.textContent = text;
 
   stdoutContainer.appendChild(div);

@@ -26,10 +26,10 @@ impl Interpreter {
         Interpreter(monkey::Interpreter::new())
     }
 
-    pub fn evaluate(&mut self, s: String) -> String {
+    pub fn evaluate(&mut self, s: String) -> Result<String, JsValue> {
         match self.0.evaluate(s) {
-            Ok(x) => x,
-            Err(x) => x,
+            Ok(x) => Ok(format!("{}", x)),
+            Err(x) => Err(JsValue::from_str(&format!("{}", x))),
         }
     }
 }
