@@ -32,6 +32,16 @@ impl Object {
             _ => true,
         }
     }
+
+    pub fn type_str(&self) -> String {
+        match self {
+            Object::Null => "NullType",
+            Object::Boolean(_) => "bool",
+            Object::Integer(_) => "int",
+            Object::Function(_) => "function",
+        }
+        .to_string()
+    }
 }
 
 impl fmt::Display for Object {

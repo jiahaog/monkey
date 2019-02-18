@@ -41,8 +41,16 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Error::Parse(errors) => write!(f, "Error parsing input: {:?}", errors),
-            Error::Eval(error) => write!(f, "Error evaluating input: {:?}", error),
+            Error::Parse(errors) => write!(
+                f,
+                "{}",
+                errors
+                    .into_iter()
+                    .map(|x| format!("{}", x))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Error::Eval(error) => write!(f, "{}", error),
         }
     }
 }
