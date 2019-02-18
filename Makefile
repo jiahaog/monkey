@@ -45,7 +45,7 @@ bootstrap:
 
 .PHONY: rust-watch
 rust-watch:
-	cargo watch -x test -s 'wasm-pack build monkey-web' --ignore 'monkey-web/pkg/**/*'
+	cargo watch -x test -s 'wasm-pack build monkey-web' --ignore 'monkey-web/{pkg,www}/**/*'
 
 .PHONY: www-watch
 www-watch: rust-build
