@@ -139,6 +139,19 @@ fn test_integer_literal_expression() {
 }
 
 #[test]
+fn test_string_literal_expression() {
+    let inp = r#""foo";
+    "bar";"#;
+    test_parser_success(
+        vec![
+            Statement::Expression(Expression::StringLiteral("foo".to_string())),
+            Statement::Expression(Expression::StringLiteral("bar".to_string())),
+        ],
+        inp,
+    );
+}
+
+#[test]
 fn test_prefix_expressions() {
     let cases = vec![
         (

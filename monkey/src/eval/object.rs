@@ -10,6 +10,7 @@ pub enum Object {
     Null,
     Boolean(bool),
     Integer(isize),
+    Str(String),
     // Separate this out because it simplifies passing the specific enum variant around with helper
     // functions for function call evaluations
     Function(Function),
@@ -39,6 +40,7 @@ impl Object {
             Object::Boolean(_) => "bool",
             Object::Integer(_) => "int",
             Object::Function(_) => "function",
+            Object::Str(_) => "string",
         }
         .to_string()
     }
@@ -50,6 +52,7 @@ impl fmt::Display for Object {
             Object::Null => write!(f, "null"),
             Object::Boolean(val) => write!(f, "{}", val),
             Object::Integer(val) => write!(f, "{}", val),
+            Object::Str(val) => write!(f, "{}", val),
             Object::Function(func) => write!(f, "{}", func),
         }
     }

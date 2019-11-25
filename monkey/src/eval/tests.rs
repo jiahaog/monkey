@@ -82,6 +82,19 @@ fn test_eval_integer_expr() {
 }
 
 #[test]
+fn test_eval_string_expr() {
+    let cases = vec![
+        (r#""foo""#, Object::Str("foo".to_string())),
+        (r#""foo" + "bar"#, Object::Str("foobar".to_string())),
+        (r#""foo" == "foo"#, Object::Boolean(true)),
+        (r#""foo" == "bar"#, Object::Boolean(false)),
+    ];
+    for (inp, expected) in cases {
+        test_eval(expected, inp);
+    }
+}
+
+#[test]
 fn test_eval_if_else_expr() {
     let cases = vec![
         ("if (true) { 10 }", Object::Integer(10)),

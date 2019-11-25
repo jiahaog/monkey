@@ -76,6 +76,7 @@ impl<'a> Parser<'a> {
         match token {
             Token::Identifier(name) => Ok(Expression::Identifier(name)),
             Token::Int(value) => Ok(Expression::IntegerLiteral(value)),
+            Token::Str(value) => Ok(Expression::StringLiteral(value)),
             Token::Bang => self.parse_prefix_expr(Operator::Not),
             Token::Minus => self.parse_prefix_expr(Operator::Minus),
             Token::Semicolon => Err(ParseError {

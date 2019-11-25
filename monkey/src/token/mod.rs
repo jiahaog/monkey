@@ -29,6 +29,7 @@ pub enum Token {
     If,
     Else,
     Return,
+    Str(String),
 }
 
 impl Token {
@@ -55,6 +56,7 @@ impl fmt::Display for Token {
                 Illegal(string) => format!("illegal: {}", &string),
                 Identifier(string) => format!("identifier: {}", &string),
                 Int(val) => format!("{}", &val),
+                Str(string) => format!("\"{}\"", &string),
                 Assign => "=".to_string(),
                 Plus => "+".to_string(),
                 Comma => ",".to_string(),

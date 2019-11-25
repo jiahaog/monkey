@@ -26,6 +26,10 @@ impl<'a> Lexer<'a> {
                 ch if is_symbol(ch) => Some(self.next_symbol()),
                 ch if ch.is_alphabetic() => Some(self.next_identifier()),
                 ch if ch.is_digit(10) => Some(self.next_int()),
+                '"' => {
+                    self.iter.next();
+                    Some(self.next_str())
+                }
                 _ => {
                     self.iter.next();
                     Some(Illegal(ch.to_string()))
@@ -79,6 +83,12 @@ impl<'a> Lexer<'a> {
             Ok(val) => Int(val),
             Err(_) => Illegal(literal),
         }
+    }
+
+    fn next_str(&mut self) -> Token {
+        let literal = consume_while(|ch| ch != '"', &mut self.iter);
+        self.iter.next();
+        Str(literal)
     }
 }
 

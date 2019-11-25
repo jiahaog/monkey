@@ -67,8 +67,9 @@ impl Eval for Expression {
                 }
                 .to_eval_result(),
             },
-            // // TODO check if this is safe
+            // TODO: check if this is safe
             Expression::IntegerLiteral(val) => Object::Integer(val as isize).to_eval_result(),
+            Expression::StringLiteral(val) => Object::Str(val).to_eval_result(),
             Expression::Boolean(val) => Object::from_bool_val(val).to_eval_result(),
             Expression::Prefix { operator, right } => right
                 .eval(env)
@@ -149,6 +150,9 @@ fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> Result<Ob
         }
         (Operator::GreaterThan, Object::Integer(left_val), Object::Integer(right_val)) => {
             Ok(Object::from_bool_val(left_val > right_val))
+        }
+        (Operator::Plus, Object::Str(left_val), Object::Str(right_val)) => {
+            Ok(Object::Str(left_val + &right_val))
         }
         (Operator::Equal, left_val, right_val) => Ok(Object::from_bool_val(left_val == right_val)),
         (Operator::NotEqual, left_val, right_val) => {

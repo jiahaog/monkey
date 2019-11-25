@@ -20,6 +20,7 @@ pub struct Program {
 pub enum Expression {
     Identifier(String),
     IntegerLiteral(usize),
+    StringLiteral(String),
     Prefix {
         operator: Operator,
         right: Box<Expression>,
@@ -47,6 +48,7 @@ impl Display for Expression {
         let string_val: String = match *self {
             Identifier(ref name) => name.to_string(),
             IntegerLiteral(ref val) => val.to_string(),
+            StringLiteral(ref val) => val.to_string(),
             Prefix {
                 ref operator,
                 ref right,

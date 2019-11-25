@@ -139,6 +139,8 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
+\"foobar\";
+\"foo space bar\";
 ";
 
     let expected = vec![
@@ -178,6 +180,10 @@ if (5 < 10) {
         Int(10),
         NotEqual,
         Int(9),
+        Semicolon,
+        Str("foobar".to_string()),
+        Semicolon,
+        Str("foo space bar".to_string()),
         Semicolon,
     ];
 
