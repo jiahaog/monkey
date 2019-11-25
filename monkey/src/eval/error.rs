@@ -38,16 +38,19 @@ impl fmt::Display for Error {
                     right,
                 } => format!(
                     "TypeError: unsupported operand type(s) for {}: '{}' and '{}'",
-                    operator, left, right
+                    operator,
+                    left.type_str(),
+                    right.type_str(),
                 ),
                 UnknownOperation { operator, right } => format!(
                     "TypeError: unsupported operand type(s) for {}: '{}'",
-                    operator, right
+                    operator,
+                    right.type_str(),
                 ),
                 IdentifierNotFound { name } => format!("NameError: name '{}' is not defined", name),
                 CallExpressionExpectedFunction { received } => format!(
                     "TypeError: '{}' object is not callable",
-                    received.type_str()
+                    received.type_str(),
                 ),
                 CallExpressionWrongNumArgs { params, arguments } => format!(
                     "TypeError: function takes {} positional {} but {} {} given",
