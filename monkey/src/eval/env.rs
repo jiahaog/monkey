@@ -1,4 +1,4 @@
-use super::object::Object;
+use super::object::{BuiltIn, Object};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -50,8 +50,10 @@ struct _Env {
 
 impl _Env {
     pub fn new() -> Self {
+        let mut store = HashMap::new();
+        store.insert("len".to_string(), Object::BuiltIn(BuiltIn::Len));
         Self {
-            store: HashMap::new(),
+            store,
             parent: None,
         }
     }

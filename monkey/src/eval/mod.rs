@@ -8,8 +8,8 @@ mod tests;
 
 pub use self::env::Env;
 pub use self::error::Error;
-pub use self::object::Object;
 use self::object::NULL;
+pub use self::object::{BuiltIn, Object};
 use self::result::{EvalResult, ToEvalResult, ToResult};
 use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
 
@@ -97,20 +97,20 @@ impl Eval for Expression {
                 arguments,
             } => {
                 // Translate identifier or function literal to common function
-                let func_result: std::result::Result<object::Function, Error> = match function {
-                    CallFunctionExpression::Identifier(name) => env
-                        .get(&name)
-                        .ok_or(Error::IdentifierNotFound {
+                let func_result = match function {
+                    CallFunctionExpression::Identifier(name) => {
+                        env.get(&name).ok_or(Error::IdentifierNotFound {
                             name: name.to_string(),
                         })
-                        .and_then(|object| object::Function::from_object(object)),
-                    CallFunctionExpression::Literal(ast_func) => {
-                        Ok(object::Function::from_ast_fn(env.clone(), ast_func))
                     }
+                    // .and_then(|object| from_object(object)),
+                    CallFunctionExpression::Literal(ast_func) => Ok(Object::Function(
+                        object::Function::from_ast_fn(env.clone(), ast_func),
+                    )),
                 };
 
                 match func_result {
-                    Ok(func) => apply_func(env, func, arguments),
+                    Ok(func) => func.apply(env, arguments),
                     Err(err) => err.to_eval_result(),
                 }
             }
@@ -181,41 +181,87 @@ fn eval_if_expr(
     })
 }
 
-fn apply_func(
-    env: Env,
-    object::Function {
-        params,
-        body,
-        env: func_env,
-    }: object::Function,
-    arguments: Vec<Expression>,
-) -> EvalResult {
-    // check params
-    if params.len() != arguments.len() {
-        Error::CallExpressionWrongNumArgs {
-            params: params.to_vec(), // not really sure what to_vec() does
-            arguments: arguments,
+trait Applicable {
+    fn apply(self, env: Env, arguments: Vec<Expression>) -> EvalResult;
+}
+
+impl Applicable for Object {
+    fn apply(self, env: Env, arguments: Vec<Expression>) -> EvalResult {
+        match self {
+            Object::Function(func) => func.apply(env, arguments),
+            Object::BuiltIn(built_in) => built_in.apply(env, arguments),
+            object => Error::CallExpressionExpectedFunction {
+                received: object.clone(),
+            }
+            .to_eval_result(),
         }
-        .to_eval_result()
-    } else {
-        params
-            .iter()
-            .zip(arguments)
-            // evaluate arguments in the current env
-            .map(|(name, expr)| {
-                expr.eval(env.clone())
-                    .to_result()
-                    .map(|object| (name, object))
-            })
-            .collect::<std::result::Result<Vec<(&String, Object)>, Error>>()
-            // bind argument results to a new env which extends the function env
-            .map(|name_and_objects| {
-                bind_objects_to_env(Env::new_extending(func_env), name_and_objects)
-            })
-            // alternative to body.clone() here would be to put RC on all AST objects
-            // which is a bit too much
-            .and_then(|child_env| body.as_ref().clone().eval(child_env).to_result())
+    }
+}
+
+impl Applicable for object::BuiltIn {
+    // TODO find a more declarative way to write this.
+    fn apply(self, env: Env, mut arguments: Vec<Expression>) -> EvalResult {
+        match self {
+            object::BuiltIn::Len => {
+                if arguments.len() != 1 {
+                    return Error::TypeError {
+                        message: format!(
+                            "len() takes exactly one arguemnt ({} given)",
+                            arguments.len()
+                        ),
+                    }
+                    .to_eval_result();
+                }
+                arguments
+                    .pop()
+                    .unwrap()
+                    .eval(env)
+                    .left_and_then(|obj| match obj {
+                        Object::Str(val) => Object::Integer(val.len() as isize).to_eval_result(),
+                        obj => Error::TypeError {
+                            message: format!("object of type '{}' has no len()", obj.type_str()),
+                        }
+                        .to_eval_result(),
+                    })
+            } // More built-ins here.
+        }
+    }
+}
+
+impl Applicable for object::Function {
+    fn apply(self, env: Env, arguments: Vec<Expression>) -> EvalResult {
+        let object::Function {
+            params,
+            body,
+            env: func_env,
+        } = self;
+        // check params
+        if params.len() != arguments.len() {
+            Error::CallExpressionWrongNumArgs {
+                params: params.to_vec(), // not really sure what to_vec() does
+                arguments: arguments,
+            }
             .to_eval_result()
+        } else {
+            params
+                .iter()
+                .zip(arguments)
+                // evaluate arguments in the current env
+                .map(|(name, expr)| {
+                    expr.eval(env.clone())
+                        .to_result()
+                        .map(|object| (name, object))
+                })
+                .collect::<std::result::Result<Vec<(&String, Object)>, Error>>()
+                // bind argument results to a new env which extends the function env
+                .map(|name_and_objects| {
+                    bind_objects_to_env(Env::new_extending(func_env), name_and_objects)
+                })
+                // alternative to body.clone() here would be to put RC on all AST objects
+                // which is a bit too much
+                .and_then(|child_env| body.as_ref().clone().eval(child_env).to_result())
+                .to_eval_result()
+        }
     }
 }
 

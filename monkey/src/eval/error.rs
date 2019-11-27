@@ -10,6 +10,9 @@ pub enum Error {
         left: Object,
         right: Object,
     },
+    TypeError {
+        message: String,
+    },
     UnknownOperation {
         operator: Operator,
         right: Object,
@@ -42,6 +45,7 @@ impl fmt::Display for Error {
                     left.type_str(),
                     right.type_str(),
                 ),
+                TypeError { message } => format!("{}", message),
                 UnknownOperation { operator, right } => format!(
                     "TypeError: unsupported operand type(s) for {}: '{}'",
                     operator,

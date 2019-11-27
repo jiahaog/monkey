@@ -14,6 +14,28 @@ pub enum Object {
     // Separate this out because it simplifies passing the specific enum variant around with helper
     // functions for function call evaluations
     Function(Function),
+    BuiltIn(BuiltIn),
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum BuiltIn {
+    Len,
+}
+
+impl BuiltIn {
+    pub fn from_identifier(name: &str) -> Option<Self> {
+        match name {
+            "len" => Some(BuiltIn::Len),
+            _ => None,
+        }
+    }
+}
+impl fmt::Display for BuiltIn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BuiltIn::Len => write!(f, "<built-in function len>"),
+        }
+    }
 }
 
 const TRUE: Object = Object::Boolean(true);
@@ -41,6 +63,7 @@ impl Object {
             Object::Integer(_) => "int",
             Object::Function(_) => "function",
             Object::Str(_) => "string",
+            Object::BuiltIn(_) => "BuiltIn",
         }
         .to_string()
     }
@@ -54,6 +77,7 @@ impl fmt::Display for Object {
             Object::Integer(val) => write!(f, "{}", val),
             Object::Str(val) => write!(f, "{}", val),
             Object::Function(func) => write!(f, "{}", func),
+            Object::BuiltIn(built_in) => write!(f, "{}", built_in),
         }
     }
 }

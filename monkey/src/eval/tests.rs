@@ -378,6 +378,47 @@ fn test_object_function_display() {
     }
 }
 
+#[test]
+fn test_eval_builtin_expr() {
+    let cases = vec![
+        (r#"len("")"#, Object::Integer(0)),
+        (r#"len("four")"#, Object::Integer(4)),
+        (r#"len("hello world")"#, Object::Integer(11)),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(expected, inp);
+    }
+}
+
+#[test]
+fn test_eval_builtin_expr_error() {
+    let cases = vec![
+        (
+            r#"len(1)"#,
+            Error::TypeError {
+                message: "object of type 'int' has no len()".to_string(),
+            },
+        ),
+        (
+            r#"len("one", "two")"#,
+            Error::TypeError {
+                message: "len() takes exactly one arguemnt (2 given)".to_string(),
+            },
+        ),
+        (
+            "let func = fn(x) { x }; len(func);",
+            Error::TypeError {
+                message: "object of type 'function' has no len()".to_string(),
+            },
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval_error(expected, inp);
+    }
+}
+
 fn test_eval(expected: Object, inp: &str) {
     match eval(inp) {
         Ok(received) => assert_eq!(expected, received),
