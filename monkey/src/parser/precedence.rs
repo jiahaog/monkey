@@ -1,4 +1,5 @@
 use crate::token::Token;
+use std::convert::From;
 
 #[derive(PartialOrd, PartialEq)]
 pub enum Precedence {
@@ -11,8 +12,8 @@ pub enum Precedence {
     Call,
 }
 
-impl Precedence {
-    pub fn from_token(token: &Token) -> Precedence {
+impl From<&Token> for Precedence {
+    fn from(token: &Token) -> Self {
         match token {
             Token::Equal => Precedence::Equals,
             Token::NotEqual => Precedence::Equals,

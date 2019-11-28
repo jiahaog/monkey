@@ -1,7 +1,7 @@
-use super::error::Error;
 use super::Env;
 use crate::ast;
 use crate::ast::Statements;
+use std::convert::From;
 use std::fmt;
 use std::rc::Rc;
 
@@ -22,14 +22,6 @@ pub enum BuiltIn {
     Len,
 }
 
-impl BuiltIn {
-    pub fn from_identifier(name: &str) -> Option<Self> {
-        match name {
-            "len" => Some(BuiltIn::Len),
-            _ => None,
-        }
-    }
-}
 impl fmt::Display for BuiltIn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -43,13 +35,16 @@ const TRUE: Object = Object::Boolean(true);
 const FALSE: Object = Object::Boolean(false);
 pub const NULL: Object = Object::Null;
 
-impl Object {
-    pub fn from_bool_val(val: bool) -> Self {
+impl From<bool> for Object {
+    fn from(val: bool) -> Self {
         match val {
             true => TRUE,
             false => FALSE,
         }
     }
+}
+
+impl Object {
     pub fn is_truthy(&self) -> bool {
         match self {
             Object::Boolean(false) | Object::Null => false,
@@ -92,17 +87,7 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn from_object(object: Object) -> Result<Self, Error> {
-        match object {
-            Object::Function(func) => Ok(func),
-            object => Err(Error::CallExpressionExpectedFunction {
-                received: object.clone(),
-            }),
-        }
-    }
-
-    pub fn from_ast_fn(env: Env, ast::Function { params, body }: ast::Function) -> Self {
-        // TODO cloning ast function fields is O(n), maybe we want to fix this
+    pub fn new(env: Env, ast::Function { params, body }: ast::Function) -> Self {
         Self {
             params: Rc::new(params),
             body: Rc::new(body),

@@ -73,8 +73,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn next_identifier(&mut self) -> Token {
-        let literal = consume_while(|ch| ch.is_alphabetic(), &mut self.iter);
-        Token::from_literal(literal)
+        consume_while(|ch| ch.is_alphabetic(), &mut self.iter).into()
     }
 
     fn next_int(&mut self) -> Token {

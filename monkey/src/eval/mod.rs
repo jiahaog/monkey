@@ -71,7 +71,7 @@ impl Eval for Expression {
             // TODO: check if this is safe
             Expression::IntegerLiteral(val) => Object::Integer(val as isize).into(),
             Expression::StringLiteral(val) => Object::Str(val).into(),
-            Expression::Boolean(val) => Object::from_bool_val(val).into(),
+            Expression::Boolean(val) => Object::from(val).into(),
             Expression::Prefix { operator, right } => right
                 .eval(env)
                 .and_then(|object| eval_prefix_expr(operator, object)),
@@ -90,7 +90,7 @@ impl Eval for Expression {
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
             Expression::FunctionLiteral(ast_func) => {
-                Object::Function(object::Function::from_ast_fn(env.clone(), ast_func)).into()
+                Object::Function(object::Function::new(env.clone(), ast_func)).into()
             }
             Expression::Call {
                 function,
@@ -105,7 +105,7 @@ impl Eval for Expression {
                         .into(),
                     ),
                     CallFunctionExpression::Literal(ast_func) => Ok(Object::Function(
-                        object::Function::from_ast_fn(env.clone(), ast_func),
+                        object::Function::new(env.clone(), ast_func),
                     )),
                 };
 
@@ -117,9 +117,9 @@ impl Eval for Expression {
 
 fn eval_prefix_expr(operator: Operator, right: Object) -> EvalResult {
     match (operator, right) {
-        (Operator::Not, Object::Boolean(true)) => Ok(Object::from_bool_val(false)),
-        (Operator::Not, Object::Boolean(false)) => Ok(Object::from_bool_val(true)),
-        (Operator::Not, Object::Integer(_)) => Ok(Object::from_bool_val(false)),
+        (Operator::Not, Object::Boolean(true)) => Ok(Object::from(false)),
+        (Operator::Not, Object::Boolean(false)) => Ok(Object::from(true)),
+        (Operator::Not, Object::Integer(_)) => Ok(Object::from(false)),
         (Operator::Minus, Object::Integer(val)) => Ok(Object::Integer(-val)),
         (operator, right) => Err(Error::UnknownOperation {
             operator: operator,
@@ -144,18 +144,16 @@ fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> EvalResul
             Ok(Object::Integer(left_val / right_val))
         }
         (Operator::LessThan, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::from_bool_val(left_val < right_val))
+            Ok(Object::from(left_val < right_val))
         }
         (Operator::GreaterThan, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::from_bool_val(left_val > right_val))
+            Ok(Object::from(left_val > right_val))
         }
         (Operator::Plus, Object::Str(left_val), Object::Str(right_val)) => {
             Ok(Object::Str(left_val + &right_val))
         }
-        (Operator::Equal, left_val, right_val) => Ok(Object::from_bool_val(left_val == right_val)),
-        (Operator::NotEqual, left_val, right_val) => {
-            Ok(Object::from_bool_val(left_val != right_val))
-        }
+        (Operator::Equal, left_val, right_val) => Ok(Object::from(left_val == right_val)),
+        (Operator::NotEqual, left_val, right_val) => Ok(Object::from(left_val != right_val)),
         (operator, left, right) => Err(Error::TypeMismatch {
             operator: operator,
             left: left,

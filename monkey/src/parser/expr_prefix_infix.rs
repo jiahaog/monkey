@@ -26,7 +26,7 @@ impl<'a> Parser<'a> {
     ) -> Result<Expression, ParseError> {
         match self.lexer.peek() {
             Some(Token::Semicolon) => Ok(prev),
-            Some(token) if precedence < Precedence::from_token(token) => {
+            Some(token) if precedence < token.into() => {
                 let x = self.lexer.next().unwrap();
                 self.parse_infix_from_token(prev, x)
                     .and_then(|next_exp| self.next_infix_expression(precedence, next_exp))
@@ -40,7 +40,7 @@ impl<'a> Parser<'a> {
         prev: Expression,
         token: Token,
     ) -> Result<Expression, ParseError> {
-        let precedence = Precedence::from_token(&token);
+        let precedence = (&token).into();
         match token {
             Token::Plus => self.parse_infix_expr(precedence, prev, Operator::Plus),
             Token::Minus => self.parse_infix_expr(precedence, prev, Operator::Minus),

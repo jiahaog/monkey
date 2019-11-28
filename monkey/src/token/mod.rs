@@ -1,4 +1,5 @@
 use self::Token::*;
+use std::convert::From;
 use std::fmt;
 
 #[derive(PartialEq, Debug)]
@@ -32,8 +33,8 @@ pub enum Token {
     Str(String),
 }
 
-impl Token {
-    pub fn from_literal(literal: String) -> Token {
+impl From<String> for Token {
+    fn from(literal: String) -> Self {
         match literal.as_ref() {
             "fn" => Token::Function,
             "let" => Token::Let,
