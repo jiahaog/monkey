@@ -1,8 +1,13 @@
+use super::env::Env;
 use super::error::Error;
 use super::object::Object;
 use either::Either;
 
-// This module contains a EvalResult as a wrapper around Either, to manage control flow of
+pub trait Eval {
+    fn eval(self, env: Env) -> EvalResult;
+}
+
+// This file contains a EvalResult as a wrapper around Either, to manage control flow of
 // expressions. normal objects are on the left, and can be manipulated by map_left for either,
 // while returning objects and errors are on the right. This allows us to keep calling
 // map_left/left_and_then to transform our EvalResult, which does nothing the moment errors or a
