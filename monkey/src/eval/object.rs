@@ -38,6 +38,7 @@ impl fmt::Display for BuiltIn {
     }
 }
 
+// Cache the constants for performance. This might not be necessary.
 const TRUE: Object = Object::Boolean(true);
 const FALSE: Object = Object::Boolean(false);
 pub const NULL: Object = Object::Null;

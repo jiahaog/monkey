@@ -10,14 +10,17 @@ mod tests;
 use self::apply::Applicable;
 pub use self::env::Env;
 pub use self::error::Error;
-use self::eval::{Eval, EvalResult, ToEvalResult, ToResult};
+use self::eval::{Eval, EvalResult, ShortCircuit};
 use self::object::NULL;
 pub use self::object::{BuiltIn, Object};
 use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
 
 impl Program {
     pub fn evaluate(self, env: Env) -> Result<Object, Error> {
-        self.eval(env).to_result()
+        self.eval(env).or_else(|short_circuit| match short_circuit {
+            ShortCircuit::ReturningObject(object) => Ok(object),
+            ShortCircuit::RuntimeError(err) => Err(err),
+        })
     }
 }
 
@@ -30,56 +33,56 @@ impl Eval for Program {
 impl Eval for Statement {
     fn eval(self, env: Env) -> EvalResult {
         match self {
-            Statement::Let(name, expr) => expr.eval(env.clone()).map_left(|object| {
+            Statement::Let(name, expr) => expr.eval(env.clone()).map(|object| {
                 env.set(name, object);
                 NULL
             }),
             Statement::Expression(expr) => expr.eval(env),
             Statement::Return(expr) => expr
                 .eval(env)
-                .left_and_then(|object| object.to_eval_result_return()),
+                .and_then(|object| Err(ShortCircuit::from(object))),
         }
     }
 }
 
 impl Eval for Statements {
     fn eval(self, env: Env) -> EvalResult {
-        self.into_iter()
-            .fold(NULL.to_eval_result(), |acc, statement| {
-                // Calling map will do nothing if the acc is already in a returning or error state.
-                // There are possibly ways to make this exit immediately
-                acc.left_and_then(|_| statement.eval(env.clone()))
-            })
+        self.into_iter().fold(NULL.into(), |acc, statement| {
+            // Calling map will do nothing if the acc is already in a returning or error state.
+            // There are possibly ways to make this exit immediately
+            acc.and_then(|_| statement.eval(env.clone()))
+        })
     }
 }
 
 impl Eval for Expression {
     fn eval(self, env: Env) -> EvalResult {
+        // Useful for debugging:
         // println!("env {:#?}\nexpr {:#?}\n", env, self);
 
         match self {
             Expression::Identifier(name) => match env.get(&name) {
-                Some(object) => object.to_eval_result(),
+                Some(object) => object.into(),
                 None => Error::IdentifierNotFound {
                     name: name.to_string(),
                 }
-                .to_eval_result(),
+                .into(),
             },
             // TODO: check if this is safe
-            Expression::IntegerLiteral(val) => Object::Integer(val as isize).to_eval_result(),
-            Expression::StringLiteral(val) => Object::Str(val).to_eval_result(),
-            Expression::Boolean(val) => Object::from_bool_val(val).to_eval_result(),
+            Expression::IntegerLiteral(val) => Object::Integer(val as isize).into(),
+            Expression::StringLiteral(val) => Object::Str(val).into(),
+            Expression::Boolean(val) => Object::from_bool_val(val).into(),
             Expression::Prefix { operator, right } => right
                 .eval(env)
-                .left_and_then(|object| eval_prefix_expr(operator, object).to_eval_result()),
+                .and_then(|object| eval_prefix_expr(operator, object)),
             Expression::Infix {
                 operator,
                 left,
                 right,
-            } => left.eval(env.clone()).left_and_then(|left_obj| {
-                right.eval(env).left_and_then(|right_obj| {
-                    eval_infix_expr(operator, left_obj, right_obj).to_eval_result()
-                })
+            } => left.eval(env.clone()).and_then(|left_obj| {
+                right
+                    .eval(env)
+                    .and_then(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
             }),
             Expression::If {
                 condition,
@@ -87,36 +90,32 @@ impl Eval for Expression {
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
             Expression::FunctionLiteral(ast_func) => {
-                Object::Function(object::Function::from_ast_fn(env.clone(), ast_func))
-                    .to_eval_result()
+                Object::Function(object::Function::from_ast_fn(env.clone(), ast_func)).into()
             }
             Expression::Call {
                 function,
                 arguments,
             } => {
-                // Translate identifier or function literal to common function
-                let func_result = match function {
-                    CallFunctionExpression::Identifier(name) => {
-                        env.get(&name).ok_or(Error::IdentifierNotFound {
+                // Normalize identifier or function literal to common function.
+                let func_result: EvalResult = match function {
+                    CallFunctionExpression::Identifier(name) => env.get(&name).ok_or(
+                        Error::IdentifierNotFound {
                             name: name.to_string(),
-                        })
-                    }
-                    // .and_then(|object| from_object(object)),
+                        }
+                        .into(),
+                    ),
                     CallFunctionExpression::Literal(ast_func) => Ok(Object::Function(
                         object::Function::from_ast_fn(env.clone(), ast_func),
                     )),
                 };
 
-                match func_result {
-                    Ok(func) => func.apply(env, arguments),
-                    Err(err) => err.to_eval_result(),
-                }
+                func_result?.apply(env, arguments)
             }
         }
     }
 }
 
-fn eval_prefix_expr(operator: Operator, right: Object) -> Result<Object, Error> {
+fn eval_prefix_expr(operator: Operator, right: Object) -> EvalResult {
     match (operator, right) {
         (Operator::Not, Object::Boolean(true)) => Ok(Object::from_bool_val(false)),
         (Operator::Not, Object::Boolean(false)) => Ok(Object::from_bool_val(true)),
@@ -125,11 +124,12 @@ fn eval_prefix_expr(operator: Operator, right: Object) -> Result<Object, Error> 
         (operator, right) => Err(Error::UnknownOperation {
             operator: operator,
             right: right,
-        }),
+        }
+        .into()),
     }
 }
 
-fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> Result<Object, Error> {
+fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> EvalResult {
     match (operator, left, right) {
         (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {
             Ok(Object::Integer(left_val + right_val))
@@ -160,7 +160,8 @@ fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> Result<Ob
             operator: operator,
             left: left,
             right: right,
-        }),
+        }
+        .into()),
     }
 }
 
@@ -170,11 +171,12 @@ fn eval_if_expr(
     consequence: Statements,
     alternative: Statements,
 ) -> EvalResult {
-    condition.eval(env.clone()).left_and_then(|object| {
+    condition.eval(env.clone()).and_then(|object| {
         if object.is_truthy() {
-            consequence.eval(env)
+            consequence
         } else {
-            alternative.eval(env)
+            alternative
         }
+        .eval(env)
     })
 }
