@@ -1,6 +1,6 @@
 use super::env::Env;
 use super::error::Error;
-use super::eval::{Eval, EvalResult, ToEvalResult, ToResult};
+use super::eval::{Eval, EvalMultiple, EvalResult, ToEvalResult, ToResult};
 use super::object::{BuiltIn, Function, Object};
 use crate::ast::Expression;
 
@@ -23,30 +23,25 @@ impl Applicable for Object {
 
 impl Applicable for BuiltIn {
     // TODO find a more declarative way to write this.
-    fn apply(self, env: Env, mut arguments: Vec<Expression>) -> EvalResult {
-        match self {
-            BuiltIn::Len => {
-                if arguments.len() != 1 {
-                    return Error::TypeError {
-                        message: format!(
-                            "len() takes exactly one arguemnt ({} given)",
-                            arguments.len()
-                        ),
-                    }
-                    .to_eval_result();
-                }
-                arguments
-                    .pop()
-                    .unwrap()
-                    .eval(env)
-                    .left_and_then(|obj| match obj {
-                        Object::Str(val) => Object::Integer(val.len() as isize).to_eval_result(),
-                        obj => Error::TypeError {
-                            message: format!("object of type '{}' has no len()", obj.type_str()),
-                        }
-                        .to_eval_result(),
-                    })
-            } // More built-ins here.
+    fn apply(self, env: Env, args: Vec<Expression>) -> EvalResult {
+        let args_evaluated = args
+            .into_iter()
+            .map(|arg| arg.eval(env.clone()))
+            .collect::<EvalMultiple>()
+            .0;
+
+        match args_evaluated {
+            Ok(objects) => match (self, objects.as_slice()) {
+                (BuiltIn::Len, [Object::Str(val)]) => Ok(Object::Integer(val.len() as isize)),
+                (BuiltIn::Len, [obj]) => Err(Error::TypeError {
+                    message: format!("object of type '{}' has no len()", obj.type_str()),
+                }),
+                (BuiltIn::Len, args) => Err(Error::TypeError {
+                    message: format!("len() takes exactly one arguemnt ({} given)", args.len()),
+                }),
+            }
+            .to_eval_result(),
+            Err(err) => Err(err).to_eval_result(),
         }
     }
 }
