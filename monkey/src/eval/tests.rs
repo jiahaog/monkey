@@ -266,6 +266,30 @@ fn test_list_expr() {
 }
 
 #[test]
+fn test_list_index_expr() {
+    let cases = vec![
+        ("[1, 2, 3][0]", Object::Integer(1)),
+        ("[1, 2, 3][1]", Object::Integer(2)),
+        ("[1, 2, 3][2]", Object::Integer(3)),
+        ("let i = 0; [1][i];", Object::Integer(1)),
+        ("[1, 2, 3][1 + 1];", Object::Integer(3)),
+        ("let myArray = [1, 2, 3]; myArray[2];", Object::Integer(3)),
+        (
+            "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+            Object::Integer(6),
+        ),
+        (
+            "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]",
+            Object::Integer(2),
+        ),
+        ("[1, 2, 3][3]", Object::Null),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(expected, inp);
+    }
+}
+#[test]
 fn test_fn_object() {
     let cases = vec![(
         "fn(x, y) { x + y }",
@@ -421,13 +445,31 @@ fn test_eval_builtin_expr_error() {
         (
             r#"len("one", "two")"#,
             Error::TypeError {
-                message: "len() takes exactly one arguemnt (2 given)".to_string(),
+                message: "len() takes exactly one argument (2 given)".to_string(),
             },
         ),
         (
             "let func = fn(x) { x }; len(func);",
             Error::TypeError {
                 message: "object of type 'function' has no len()".to_string(),
+            },
+        ),
+        (
+            r#"[]["string index"]"#,
+            Error::TypeError {
+                message: "list indices must be integers, not string".to_string(),
+            },
+        ),
+        (
+            r#"[][-1]"#,
+            Error::TypeError {
+                message: "list indices must be positive".to_string(),
+            },
+        ),
+        (
+            r#""some string"[1]"#,
+            Error::TypeError {
+                message: "object of type 'string' has no index".to_string(),
             },
         ),
     ];

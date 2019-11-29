@@ -82,6 +82,17 @@ fn test_display() {
             },
             "something((x + y))",
         ),
+        (
+            Expression::Index {
+                left: Expression::ListLiteral(vec![
+                    Expression::StringLiteral("bar".to_string()),
+                    Expression::IntegerLiteral(2),
+                ])
+                .into(),
+                index: Expression::IntegerLiteral(0).into(),
+            },
+            r#"(["bar", 2][0])"#,
+        ),
     ];
 
     for (inp, expected) in cases {

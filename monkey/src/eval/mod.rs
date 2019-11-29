@@ -114,6 +114,9 @@ impl Eval for Expression {
 
                 func_result?.apply(env, arguments)
             }
+            Expression::Index { left, index } => {
+                object::BuiltIn::Index.apply(env, vec![*left, *index])
+            }
         }
     }
 }

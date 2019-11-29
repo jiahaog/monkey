@@ -21,12 +21,23 @@ pub enum Object {
 #[derive(PartialEq, Debug, Clone)]
 pub enum BuiltIn {
     Len,
+    Index,
+}
+
+impl BuiltIn {
+    pub fn register(env: Env) -> Env {
+        env.set("len".to_string(), Object::BuiltIn(BuiltIn::Len));
+        // Not all built-ins are here such as `Index` because it can be called using `[$index]`.
+        // This allows us to reuse the apply logic of the built-ins for operators.
+        env
+    }
 }
 
 impl fmt::Display for BuiltIn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             BuiltIn::Len => write!(f, "<built-in function len>"),
+            BuiltIn::Index => write!(f, "<built-in function index>"),
         }
     }
 }

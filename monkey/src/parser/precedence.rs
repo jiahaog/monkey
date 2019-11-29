@@ -1,7 +1,7 @@
 use crate::token::Token;
 use std::convert::From;
 
-#[derive(PartialOrd, PartialEq)]
+#[derive(PartialOrd, PartialEq, Debug)]
 pub enum Precedence {
     Lowest,
     Equals,
@@ -24,6 +24,7 @@ impl From<&Token> for Precedence {
             Token::Slash => Precedence::Product,
             Token::Asterisk => Precedence::Product,
             Token::LParen => Precedence::Call,
+            Token::LBracket => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }

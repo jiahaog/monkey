@@ -14,6 +14,7 @@ pub enum ParseErrorExpected {
     ParenthesisForFunctionParams,
     ParenthesisForFunctionBody,
     ParameterForFunction,
+    SingleIndex,
 }
 
 #[derive(Debug, PartialEq)]
@@ -35,6 +36,7 @@ impl fmt::Display for ParseError {
             ParenthesisForFunctionParams => "parenthesis for function parameters",
             ParenthesisForFunctionBody => "parenthesis for function body",
             ParameterForFunction => "parameter for function",
+            SingleIndex => "list index must be a single integer",
         };
 
         let received = match &self.received {

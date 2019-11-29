@@ -42,6 +42,10 @@ pub enum Expression {
         function: CallFunctionExpression,
         arguments: Vec<Expression>,
     },
+    Index {
+        left: Box<Expression>,
+        index: Box<Expression>,
+    },
 }
 
 impl Display for Expression {
@@ -66,6 +70,10 @@ impl Display for Expression {
                 ref function,
                 ref arguments,
             } => format!("{}({})", function, format_vec(arguments)),
+            Index {
+                ref left,
+                ref index,
+            } => format!("({}[{}])", left, index),
             ref x => unimplemented!("Token: {:?}", x),
         };
         write!(f, "{}", string_val)

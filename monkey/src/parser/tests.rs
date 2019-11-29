@@ -154,7 +154,8 @@ fn test_string_literal_expression() {
 #[test]
 fn test_list_literal_expression() {
     let inp = r#"[1, 2];
-    ["bar", 2];"#;
+    ["bar", 2];
+    [2 + 1, 3]"#;
     test_parser_success(
         vec![
             Statement::Expression(Expression::ListLiteral(vec![
@@ -165,9 +166,95 @@ fn test_list_literal_expression() {
                 Expression::StringLiteral("bar".to_string()),
                 Expression::IntegerLiteral(2),
             ])),
+            Statement::Expression(Expression::ListLiteral(vec![
+                Expression::Infix {
+                    operator: Operator::Plus,
+                    left: Expression::IntegerLiteral(2).into(),
+                    right: Expression::IntegerLiteral(1).into(),
+                },
+                Expression::IntegerLiteral(3),
+            ])),
         ],
         inp,
     );
+}
+
+#[test]
+fn test_list_index_expression() {
+    let cases = vec![
+        (
+            "[1, 2][3 * 4];",
+            vec![Statement::Expression(Expression::Index {
+                left: Expression::ListLiteral(vec![
+                    Expression::IntegerLiteral(1),
+                    Expression::IntegerLiteral(2),
+                ])
+                .into(),
+                index: Expression::Infix {
+                    operator: Operator::Multiply,
+                    left: Expression::IntegerLiteral(3).into(),
+                    right: Expression::IntegerLiteral(4).into(),
+                }
+                .into(),
+            })],
+        ),
+        (
+            "a * b[2];",
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Multiply,
+                left: Expression::Identifier("a".to_string()).into(),
+                right: Expression::Index {
+                    left: Expression::Identifier("b".to_string()).into(),
+                    index: Expression::IntegerLiteral(2).into(),
+                }
+                .into(),
+            })],
+        ),
+        (
+            "2 * [1, 2][1];",
+            vec![Statement::Expression(Expression::Infix {
+                operator: Operator::Multiply,
+                left: Expression::IntegerLiteral(2).into(),
+                right: Expression::Index {
+                    left: Expression::ListLiteral(vec![
+                        Expression::IntegerLiteral(1),
+                        Expression::IntegerLiteral(2),
+                    ])
+                    .into(),
+                    index: Expression::IntegerLiteral(1).into(),
+                }
+                .into(),
+            })],
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_parser_success(expected, inp);
+    }
+}
+
+#[test]
+fn test_list_index_expression_error() {
+    let cases = vec![
+        (
+            "[1][];",
+            vec![ParseError {
+                expected: ParseErrorExpected::SingleIndex,
+                received: Some(Token::RBracket),
+            }],
+        ),
+        (
+            "[1][1,2];",
+            vec![ParseError {
+                expected: ParseErrorExpected::SingleIndex,
+                received: Some(Token::Comma),
+            }],
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_parser_error(expected, inp);
+    }
 }
 
 #[test]
@@ -471,6 +558,14 @@ fn test_operator_precedence_expression() {
         (
             "add(a + b + c * d / f + g)",
             "add((((a + b) + ((c * d) / f)) + g))",
+        ),
+        (
+            "a * [1, 2, 3, 4][b * c] * d",
+            "((a * ([1, 2, 3, 4][(b * c)])) * d)",
+        ),
+        (
+            "add(a * b[2], b[1], 2 * [1, 2][1])",
+            "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
         ),
     ];
 

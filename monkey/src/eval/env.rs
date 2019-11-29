@@ -11,7 +11,8 @@ pub struct Env(EnvRef);
 
 impl Env {
     pub fn new() -> Self {
-        Env(Rc::new(RefCell::new(_Env::new())))
+        let env = Env(Rc::new(RefCell::new(_Env::new())));
+        BuiltIn::register(env)
     }
 
     pub(super) fn new_extending(parent: Self) -> Self {
@@ -50,10 +51,8 @@ struct _Env {
 
 impl _Env {
     pub fn new() -> Self {
-        let mut store = HashMap::new();
-        store.insert("len".to_string(), Object::BuiltIn(BuiltIn::Len));
         Self {
-            store,
+            store: HashMap::new(),
             parent: None,
         }
     }

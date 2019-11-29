@@ -51,11 +51,40 @@ impl<'a> Parser<'a> {
             Token::LessThan => self.parse_infix_expr(precedence, prev, Operator::LessThan),
             Token::GreaterThan => self.parse_infix_expr(precedence, prev, Operator::GreaterThan),
             Token::LParen => self.parse_call_expression(prev),
+            Token::LBracket => self.parse_index_expression(prev),
             token => Err(ParseError {
                 expected: ParseErrorExpected::Expression,
                 received: Some(token),
             }),
         }
+    }
+
+    fn parse_index_expression(&mut self, prev: Expression) -> Result<Expression, ParseError> {
+        self.next_expression(Precedence::Lowest)
+            // If no next expression can be successfully parsed, replace the error message.
+            .map_err(
+                |ParseError {
+                     expected: _,
+                     received,
+                 }| ParseError {
+                    expected: ParseErrorExpected::SingleIndex,
+                    received: received,
+                },
+            )
+            .map(|next_expr| Expression::Index {
+                left: prev.into(),
+                index: next_expr.into(),
+            })
+            .and_then(|expr| match self.lexer.peek() {
+                Some(Token::RBracket) => {
+                    self.lexer.next();
+                    Ok(expr)
+                }
+                _ => Err(ParseError {
+                    expected: ParseErrorExpected::SingleIndex,
+                    received: self.lexer.next(),
+                }),
+            })
     }
 
     fn parse_infix_expr(
@@ -65,10 +94,10 @@ impl<'a> Parser<'a> {
         operator: Operator,
     ) -> Result<Expression, ParseError> {
         self.next_expression(precedence)
-            .map(|next_exp| Expression::Infix {
+            .map(|next_expr| Expression::Infix {
                 operator,
                 left: Box::new(left),
-                right: Box::new(next_exp),
+                right: Box::new(next_expr),
             })
     }
 

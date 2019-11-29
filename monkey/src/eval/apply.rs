@@ -27,11 +27,47 @@ impl Applicable for BuiltIn {
 
         match (self, objects.as_slice()) {
             (BuiltIn::Len, [Object::Str(val)]) => Ok(Object::Integer(val.len() as isize)),
-            (BuiltIn::Len, [obj]) => Err(Error::TypeError {
-                message: format!("object of type '{}' has no len()", obj.type_str()),
+            (BuiltIn::Len, [wrong_list_type]) => Err(Error::TypeError {
+                message: format!(
+                    "object of type '{}' has no len()",
+                    wrong_list_type.type_str()
+                ),
             }),
-            (BuiltIn::Len, args) => Err(Error::TypeError {
-                message: format!("len() takes exactly one arguemnt ({} given)", args.len()),
+            (BuiltIn::Len, wrong_num_args) => Err(Error::TypeError {
+                message: format!(
+                    "len() takes exactly one argument ({} given)",
+                    wrong_num_args.len()
+                ),
+            }),
+            (BuiltIn::Index, [Object::List(vals), Object::Integer(index)]) => {
+                if index < &0 {
+                    return Error::TypeError {
+                        message: "list indices must be positive".to_string(),
+                    }
+                    .into();
+                }
+                match vals.get(*index as usize) {
+                    Some(val) => Ok(val.clone()),
+                    None => Ok(Object::Null),
+                }
+            }
+            (BuiltIn::Index, [Object::List(_), wrong_index_type]) => Err(Error::TypeError {
+                message: format!(
+                    "list indices must be integers, not {}",
+                    wrong_index_type.type_str()
+                ),
+            }),
+            (BuiltIn::Index, [wrong_list_type, _]) => Err(Error::TypeError {
+                message: format!(
+                    "object of type '{}' has no index",
+                    wrong_list_type.type_str()
+                ),
+            }),
+            (BuiltIn::Index, wrong_num_args) => Err(Error::TypeError {
+                message: format!(
+                    "index() takes exactly one argument ({} given)",
+                    wrong_num_args.len()
+                ),
             }),
         }
         .map_err(|err| err.into())
