@@ -72,7 +72,7 @@ impl Display for Expression {
     }
 }
 
-fn format_vec<T: Display>(vec: &Vec<T>) -> String {
+pub fn format_vec<T: Display>(vec: &Vec<T>) -> String {
     vec.iter()
         .map(|val| val.to_string())
         .collect::<Vec<String>>()

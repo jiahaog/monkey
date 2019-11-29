@@ -1,6 +1,6 @@
 use super::Env;
 use crate::ast;
-use crate::ast::Statements;
+use crate::ast::{format_vec, Statements};
 use std::convert::From;
 use std::fmt;
 use std::rc::Rc;
@@ -76,7 +76,7 @@ impl fmt::Display for Object {
             Object::Str(val) => write!(f, "{}", val),
             Object::Function(func) => write!(f, "{}", func),
             Object::BuiltIn(built_in) => write!(f, "{}", built_in),
-            Object::List(values) => write!(f, "{:?}", values),
+            Object::List(values) => write!(f, "[{}]", format_vec(values)),
         }
     }
 }
