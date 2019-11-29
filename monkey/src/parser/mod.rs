@@ -1,5 +1,4 @@
-#![allow(dead_code)]
-
+mod collections;
 mod error;
 mod expr_call;
 mod expr_func;

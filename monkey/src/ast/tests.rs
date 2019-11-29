@@ -26,6 +26,17 @@ fn test_display() {
             "(!(-a))",
         ),
         (
+            Expression::StringLiteral("hello world".to_string()),
+            r#""hello world""#,
+        ),
+        (
+            Expression::ArrayLiteral(vec![
+                Expression::StringLiteral("bar".to_string()),
+                Expression::IntegerLiteral(2),
+            ]),
+            r#"["bar", 2]"#,
+        ),
+        (
             Expression::FunctionLiteral(Function {
                 params: vec!["x".to_string(), "y".to_string()],
                 body: vec![

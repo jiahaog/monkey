@@ -1,6 +1,7 @@
 use super::env::Env;
 use super::error::Error;
 use super::object::Object;
+use crate::ast::Expression;
 use std::convert::From;
 use std::iter::FromIterator;
 
@@ -47,7 +48,7 @@ impl From<Error> for EvalResult {
 
 // Avoid rust E0117: only traits defined for the current crate can be implemented for arbitrary
 // types.
-pub struct EvalMultiple(pub Result<Vec<Object>, ShortCircuit>);
+struct EvalMultiple(pub Result<Vec<Object>, ShortCircuit>);
 
 // So that we can collect a Vec<EvalResult> into a Result<Vec<Object>, ShortCircuit>.
 // This is probably too complicated for just one use of collect(). But it is a good learning
@@ -65,4 +66,12 @@ impl FromIterator<EvalResult> for EvalMultiple {
             }
         }))
     }
+}
+
+pub fn eval_exprs(env: Env, exprs: Vec<Expression>) -> Result<Vec<Object>, ShortCircuit> {
+    exprs
+        .into_iter()
+        .map(|arg| arg.eval(env.clone()))
+        .collect::<EvalMultiple>()
+        .0
 }

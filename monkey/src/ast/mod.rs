@@ -21,6 +21,7 @@ pub enum Expression {
     Identifier(String),
     IntegerLiteral(usize),
     StringLiteral(String),
+    ArrayLiteral(Vec<Expression>),
     Prefix {
         operator: Operator,
         right: Box<Expression>,
@@ -48,7 +49,8 @@ impl Display for Expression {
         let string_val: String = match *self {
             Identifier(ref name) => name.to_string(),
             IntegerLiteral(ref val) => val.to_string(),
-            StringLiteral(ref val) => val.to_string(),
+            StringLiteral(ref val) => format!(r#""{}""#, val.to_string()),
+            ArrayLiteral(ref vals) => format!("[{}]", format_vec(vals)),
             Prefix {
                 ref operator,
                 ref right,
@@ -71,12 +73,10 @@ impl Display for Expression {
 }
 
 fn format_vec<T: Display>(vec: &Vec<T>) -> String {
-    let mut vec_str = vec
-        .iter()
-        .fold(String::new(), |acc, x| format!("{}{}, ", acc, &x));
-    // remove the last ', ' from the string
-    vec_str.truncate(vec_str.len() - 2);
-    vec_str
+    vec.iter()
+        .map(|val| val.to_string())
+        .collect::<Vec<String>>()
+        .join(", ")
 }
 
 #[derive(PartialEq, Debug, Clone)]

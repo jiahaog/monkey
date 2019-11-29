@@ -86,6 +86,7 @@ impl<'a> Parser<'a> {
             Token::True => Ok(Expression::Boolean(true)),
             Token::False => Ok(Expression::Boolean(false)),
             Token::LParen => self.parse_grouped_expression(),
+            Token::LBracket => self.parse_array_expression(),
             Token::If => self.parse_if_expression(),
             Token::Function => self.parse_function_expression(),
             Token::Return => Err(ParseError {

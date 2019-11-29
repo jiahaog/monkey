@@ -69,9 +69,7 @@ fn test_unknown_symbol() {
 }
 
 #[test]
-fn test_next_token_simple() {
-    assert_eq!(2 + 2, 4);
-
+fn test_next_token_functions() {
     let input = "let five = 5;
 let ten = 10;
 
@@ -128,7 +126,7 @@ let result = add(five, ten);
 fn test_next_token_extended() {
     assert_eq!(2 + 2, 4);
 
-    let input = "!-/*5;
+    let input = r#"!-/*5;
 5 < 10 > 5;
 
 if (5 < 10) {
@@ -139,9 +137,9 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
-\"foobar\";
-\"foo space bar\";
-";
+"foobar";
+"foo space bar";
+"#;
 
     let expected = vec![
         Bang,
@@ -187,6 +185,14 @@ if (5 < 10) {
         Semicolon,
     ];
 
+    test_lexer(expected, input);
+}
+
+#[test]
+fn test_next_token_array() {
+    let input = r"[1, 2];";
+
+    let expected = vec![LBracket, Int(1), Comma, Int(2), RBracket, Semicolon];
     test_lexer(expected, input);
 }
 

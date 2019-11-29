@@ -15,6 +15,7 @@ pub enum Object {
     // functions for function call evaluations
     Function(Function),
     BuiltIn(BuiltIn),
+    Array(Vec<Object>),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -60,6 +61,7 @@ impl Object {
             Object::Function(_) => "function",
             Object::Str(_) => "string",
             Object::BuiltIn(_) => "BuiltIn",
+            Object::Array(_) => "Array",
         }
         .to_string()
     }
@@ -74,6 +76,7 @@ impl fmt::Display for Object {
             Object::Str(val) => write!(f, "{}", val),
             Object::Function(func) => write!(f, "{}", func),
             Object::BuiltIn(built_in) => write!(f, "{}", built_in),
+            Object::Array(values) => write!(f, "{:?}", values),
         }
     }
 }

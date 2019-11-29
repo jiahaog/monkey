@@ -10,7 +10,7 @@ mod tests;
 use self::apply::Applicable;
 pub use self::env::Env;
 pub use self::error::Error;
-use self::eval::{Eval, EvalResult, ShortCircuit};
+use self::eval::{eval_exprs, Eval, EvalResult, ShortCircuit};
 use self::object::NULL;
 pub use self::object::{BuiltIn, Object};
 use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
@@ -71,6 +71,9 @@ impl Eval for Expression {
             // TODO: check if this is safe
             Expression::IntegerLiteral(val) => Object::Integer(val as isize).into(),
             Expression::StringLiteral(val) => Object::Str(val).into(),
+            Expression::ArrayLiteral(vals) => {
+                eval_exprs(env, vals).and_then(|objs| Object::Array(objs).into())
+            }
             Expression::Boolean(val) => Object::from(val).into(),
             Expression::Prefix { operator, right } => right
                 .eval(env)

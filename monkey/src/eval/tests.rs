@@ -248,6 +248,24 @@ fn test_let_expr_error() {
 }
 
 #[test]
+fn test_array_expr() {
+    let cases = vec![
+        (
+            "[1, 2];",
+            Object::Array(vec![Object::Integer(1), Object::Integer(2)]),
+        ),
+        (
+            r#"[1 + 3, "abc"];"#,
+            Object::Array(vec![Object::Integer(4), Object::Str("abc".to_string())]),
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(expected, inp);
+    }
+}
+
+#[test]
 fn test_fn_object() {
     let cases = vec![(
         "fn(x, y) { x + y }",

@@ -152,6 +152,25 @@ fn test_string_literal_expression() {
 }
 
 #[test]
+fn test_array_literal_expression() {
+    let inp = r#"[1, 2];
+    ["bar", 2];"#;
+    test_parser_success(
+        vec![
+            Statement::Expression(Expression::ArrayLiteral(vec![
+                Expression::IntegerLiteral(1),
+                Expression::IntegerLiteral(2),
+            ])),
+            Statement::Expression(Expression::ArrayLiteral(vec![
+                Expression::StringLiteral("bar".to_string()),
+                Expression::IntegerLiteral(2),
+            ])),
+        ],
+        inp,
+    );
+}
+
+#[test]
 fn test_prefix_expressions() {
     let cases = vec![
         (

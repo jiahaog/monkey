@@ -53,6 +53,8 @@ impl<'a> Lexer<'a> {
             Some(')') => RParen,
             Some('{') => LBrace,
             Some('}') => RBrace,
+            Some('[') => LBracket,
+            Some(']') => RBracket,
             Some(',') => Comma,
             Some(';') => Semicolon,
             Some('-') => Minus,
@@ -105,7 +107,8 @@ fn is_whitespace(ch: char) -> bool {
 
 fn is_symbol(ch: char) -> bool {
     match ch {
-        '=' | '+' | '(' | ')' | '{' | '}' | ',' | ';' | '-' | '!' | '*' | '/' | '<' | '>' => true,
+        '=' | '+' | '(' | ')' | '{' | '}' | '[' | ']' | ',' | ';' | '-' | '!' | '*' | '/' | '<'
+        | '>' => true,
         _ => false,
     }
 }

@@ -1,6 +1,6 @@
 use super::env::Env;
 use super::error::Error;
-use super::eval::{Eval, EvalMultiple, EvalResult, ShortCircuit};
+use super::eval::{eval_exprs, Eval, EvalResult};
 use super::object::{BuiltIn, Function, Object};
 use crate::ast::Expression;
 
@@ -23,11 +23,7 @@ impl Applicable for Object {
 
 impl Applicable for BuiltIn {
     fn apply(self, env: Env, args: Vec<Expression>) -> EvalResult {
-        let objects = args
-            .into_iter()
-            .map(|arg| arg.eval(env.clone()))
-            .collect::<EvalMultiple>()
-            .0?;
+        let objects = eval_exprs(env, args)?;
 
         match (self, objects.as_slice()) {
             (BuiltIn::Len, [Object::Str(val)]) => Ok(Object::Integer(val.len() as isize)),
@@ -49,7 +45,7 @@ impl Applicable for Function {
             body,
             env: func_env,
         } = self;
-        // check params
+        // Check params.
         if params.len() != arguments.len() {
             Error::CallExpressionWrongNumArgs {
                 params: params.to_vec(), // not really sure what to_vec() does
@@ -57,28 +53,20 @@ impl Applicable for Function {
             }
             .into()
         } else {
-            params
-                .iter()
-                .zip(arguments)
-                // evaluate arguments in the current env
-                .map(|(name, expr)| expr.eval(env.clone()).map(|object| (name, object)))
-                .collect::<std::result::Result<Vec<(&String, Object)>, ShortCircuit>>()
-                // bind argument results to a new env which extends the function env
-                .map(|name_and_objects| {
-                    bind_objects_to_env(Env::new_extending(func_env), name_and_objects)
-                })
-                // alternative to body.clone() here would be to put RC on all AST objects
-                // which is a bit too much
-                .and_then(|child_env| body.as_ref().clone().eval(child_env))
+            // Evaluate arguments in the current env.
+            let evaluated: Vec<Object> = eval_exprs(env.clone(), arguments)?;
+
+            // bind argument results to a new env which extends the function env.
+            let env_with_objects = params.iter().zip(evaluated).fold(
+                Env::new_extending(func_env),
+                |acc, (name, obj)| {
+                    acc.set(name.to_string(), obj);
+                    acc
+                },
+            );
+            // Alternative to body.clone() here would be to put RC on all AST objects
+            // which is a bit too much/
+            body.as_ref().clone().eval(env_with_objects)
         }
     }
-}
-
-fn bind_objects_to_env(env: Env, names_and_objects: Vec<(&String, Object)>) -> Env {
-    names_and_objects
-        .into_iter()
-        .fold(env, |env, (name, object)| {
-            env.set(name.to_string(), object);
-            env
-        })
 }
