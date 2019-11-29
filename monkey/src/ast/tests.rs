@@ -30,7 +30,7 @@ fn test_display() {
             r#""hello world""#,
         ),
         (
-            Expression::ArrayLiteral(vec![
+            Expression::ListLiteral(vec![
                 Expression::StringLiteral("bar".to_string()),
                 Expression::IntegerLiteral(2),
             ]),

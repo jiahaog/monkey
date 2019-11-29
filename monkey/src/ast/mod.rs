@@ -21,7 +21,7 @@ pub enum Expression {
     Identifier(String),
     IntegerLiteral(usize),
     StringLiteral(String),
-    ArrayLiteral(Vec<Expression>),
+    ListLiteral(Vec<Expression>),
     Prefix {
         operator: Operator,
         right: Box<Expression>,
@@ -50,7 +50,7 @@ impl Display for Expression {
             Identifier(ref name) => name.to_string(),
             IntegerLiteral(ref val) => val.to_string(),
             StringLiteral(ref val) => format!(r#""{}""#, val.to_string()),
-            ArrayLiteral(ref vals) => format!("[{}]", format_vec(vals)),
+            ListLiteral(ref vals) => format!("[{}]", format_vec(vals)),
             Prefix {
                 ref operator,
                 ref right,

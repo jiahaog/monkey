@@ -189,7 +189,7 @@ if (5 < 10) {
 }
 
 #[test]
-fn test_next_token_array() {
+fn test_next_token_list() {
     let input = r"[1, 2];";
 
     let expected = vec![LBracket, Int(1), Comma, Int(2), RBracket, Semicolon];

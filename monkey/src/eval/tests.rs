@@ -248,15 +248,15 @@ fn test_let_expr_error() {
 }
 
 #[test]
-fn test_array_expr() {
+fn test_list_expr() {
     let cases = vec![
         (
             "[1, 2];",
-            Object::Array(vec![Object::Integer(1), Object::Integer(2)]),
+            Object::List(vec![Object::Integer(1), Object::Integer(2)]),
         ),
         (
             r#"[1 + 3, "abc"];"#,
-            Object::Array(vec![Object::Integer(4), Object::Str("abc".to_string())]),
+            Object::List(vec![Object::Integer(4), Object::Str("abc".to_string())]),
         ),
     ];
 

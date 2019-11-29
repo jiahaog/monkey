@@ -71,8 +71,8 @@ impl Eval for Expression {
             // TODO: check if this is safe
             Expression::IntegerLiteral(val) => Object::Integer(val as isize).into(),
             Expression::StringLiteral(val) => Object::Str(val).into(),
-            Expression::ArrayLiteral(vals) => {
-                eval_exprs(env, vals).and_then(|objs| Object::Array(objs).into())
+            Expression::ListLiteral(vals) => {
+                eval_exprs(env, vals).and_then(|objs| Object::List(objs).into())
             }
             Expression::Boolean(val) => Object::from(val).into(),
             Expression::Prefix { operator, right } => right
