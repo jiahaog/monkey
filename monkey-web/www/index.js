@@ -32,7 +32,13 @@ inputField.addEventListener('keyup', element => {
 const appendOutput = (className, text) => {
   const div = document.createElement('div');
   div.classList.add(className);
-  div.textContent = text;
+
+  text.split("\n").map(row => {
+    const paragraph = document.createElement('p');
+    paragraph.classList.add("history-output-line");
+    paragraph.textContent = row;
+    div.appendChild(paragraph);
+  });
 
   stdoutContainer.appendChild(div);
 };

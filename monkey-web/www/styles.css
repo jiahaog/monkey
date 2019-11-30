@@ -38,3 +38,7 @@ body {
   /* red */
   color: rgb(255, 51, 52);
 }
+
+.history-output-line {
+  margin: 0;
+}
