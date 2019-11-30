@@ -431,10 +431,72 @@ fn test_eval_builtin_expr() {
             "push([0], 3)",
             Object::List(vec![Object::Integer(0), Object::Integer(3)]),
         ),
+        ("rest([1,2])", Object::List(vec![Object::Integer(2)])),
+        ("rest([])", Object::Null),
+        ("rest(rest([1]))", Object::Null),
     ];
 
     for (inp, expected) in cases {
         test_eval(expected, inp);
+    }
+}
+
+#[test]
+fn test_eval_list_iter_expr() {
+    let iter_helpers = "
+let map = fn(arr, f) {
+  let iter = fn(arr, accumulated) {
+    len(arr)
+    if (len(arr) == 0) {
+      accumulated
+    } else {
+      iter(rest(arr), push(accumulated, f(arr[0])))
+    }
+  };
+
+  iter(arr, [])
+};
+
+let reduce = fn(arr, initial, f) {
+  let iter = fn(arr, result) {
+    if (len(arr) == 0) {
+      result
+    } else {
+      iter(rest(arr), f(result, arr[0]));
+    }
+  };
+
+  iter(arr, initial);
+};
+    ";
+
+    let cases = vec![
+        (
+            "
+let a = [1, 2, 3, 4];
+let double = fn(x) { x * 2 };
+map(a, double);
+        ",
+            Object::List(vec![
+                Object::Integer(2),
+                Object::Integer(4),
+                Object::Integer(6),
+                Object::Integer(8),
+            ]),
+        ),
+        (
+            "
+let sum = fn(arr) {
+  reduce(arr, 0, fn(initial, el) { initial + el });
+};
+sum([1,2,3,4,5])
+        ",
+            Object::Integer(15),
+        ),
+    ];
+
+    for (inp, expected) in cases {
+        test_eval(expected, &(String::from(iter_helpers) + inp));
     }
 }
 

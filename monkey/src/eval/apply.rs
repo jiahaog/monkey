@@ -87,6 +87,22 @@ impl Applicable for BuiltIn {
                     wrong_num_args.len()
                 ),
             }),
+            (BuiltIn::Rest, [Object::List(vals)]) => Ok(match vals.get(1..) {
+                Some(x) => Object::List(x.into()),
+                None => Object::Null,
+            }),
+            (BuiltIn::Rest, [wrong_list_type]) => Err(Error::TypeError {
+                message: format!(
+                    "object of type '{}' has no rest()",
+                    wrong_list_type.type_str()
+                ),
+            }),
+            (BuiltIn::Rest, wrong_num_args) => Err(Error::TypeError {
+                message: format!(
+                    "rest() takes exactly one argument ({} given)",
+                    wrong_num_args.len()
+                ),
+            }),
         }
         .map_err(|err| err.into())
     }
