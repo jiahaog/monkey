@@ -1,6 +1,7 @@
 use super::object::{BuiltIn, Object};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::mem;
 use std::rc::Rc;
 
 type EnvRef = Rc<RefCell<_Env>>;
@@ -27,6 +28,14 @@ impl Env {
     pub(super) fn set(&self, key: String, val: Object) {
         self.0.borrow_mut().set(key, val);
     }
+
+    pub(super) fn write_stdout(&self, msg: String) {
+        self.0.borrow_mut().write_stdout(msg);
+    }
+
+    pub fn pop_stdout(&self) -> Vec<String> {
+        self.0.borrow_mut().pop_stdout()
+    }
 }
 
 impl Clone for Env {
@@ -47,6 +56,7 @@ impl PartialEq for Env {
 struct _Env {
     store: HashMap<String, Object>,
     parent: Option<Env>,
+    stdout: Vec<String>,
 }
 
 impl _Env {
@@ -54,6 +64,7 @@ impl _Env {
         Self {
             store: HashMap::new(),
             parent: None,
+            stdout: Vec::new(),
         }
     }
 
@@ -73,5 +84,21 @@ impl _Env {
 
     pub(super) fn set(&mut self, key: String, val: Object) {
         self.store.insert(key, val);
+    }
+
+    // TODO: More performant way to always write and read the stdout instead of going up the tree.
+
+    pub(super) fn write_stdout(&mut self, msg: String) {
+        match &self.parent {
+            None => self.stdout.push(msg),
+            Some(parent) => parent.write_stdout(msg),
+        }
+    }
+
+    pub(super) fn pop_stdout(&mut self) -> Vec<String> {
+        match &self.parent {
+            None => mem::replace(&mut self.stdout, Vec::new()),
+            Some(parent) => parent.pop_stdout(),
+        }
     }
 }

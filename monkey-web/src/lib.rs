@@ -27,9 +27,12 @@ impl Interpreter {
     }
 
     pub fn evaluate(&mut self, s: String) -> Result<String, JsValue> {
-        match self.0.evaluate(s) {
-            Ok(x) => Ok(format!("{}", x)),
-            Err(x) => Err(JsValue::from_str(&format!("{}", x))),
+        let monkey::InterpreterResult { stdout, result } = self.0.evaluate(s);
+
+        // TODO figure out how to pass structs to JS instead of using this hacky delimiter.
+        match result {
+            Ok(x) => Ok(format!("{}|{}", stdout, x)),
+            Err(x) => Err(JsValue::from_str(&format!("{}|{}", stdout, x))),
         }
     }
 }

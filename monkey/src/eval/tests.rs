@@ -440,6 +440,53 @@ fn test_eval_builtin_expr() {
         test_eval(expected, inp);
     }
 }
+#[test]
+fn test_eval_builtin_print() {
+    let cases = vec![
+        ("print(1)", Ok(Object::Null), vec!["1"]),
+        ("print(1, 2); print(3)", Ok(Object::Null), vec!["1 2", "3"]),
+        (
+            "
+let test = fn(x) {
+    print(1, 2);
+    print(3);
+    len(x)
+};
+
+test([])
+        ",
+            Ok(Object::Integer(0)),
+            vec!["1 2", "3"],
+        ),
+        (
+            "
+let test = fn(x) {
+    print(3);
+    len(x)
+};
+
+test(1)
+        ",
+            Err(Error::TypeError {
+                message: "object of type 'int' has no len()".to_string(),
+            }),
+            vec!["3"],
+        ),
+    ];
+
+    for (inp, expected_result, expected_stdout) in cases {
+        let lexer = Lexer::new(inp);
+        let parser = Parser::new(lexer);
+
+        let program = parser.parse().expect("No parse errors");
+
+        let env = Env::new();
+
+        let result = program.evaluate(env.clone());
+        assert_eq!(expected_result, result);
+        assert_eq!(expected_stdout, env.pop_stdout());
+    }
+}
 
 #[test]
 fn test_eval_list_iter_expr() {

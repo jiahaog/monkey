@@ -15,9 +15,13 @@ inputField.addEventListener('keyup', element => {
 
     try {
       const output = interpreter.evaluate(input);
-      appendOutput('history-output-ok', output);
+      const { stdout, result } = parseOutput(output);
+      appendOutput('history-output-ok', stdout);
+      appendOutput('history-output-ok', result);
     } catch (error) {
-      appendOutput('history-output-err', error);
+      const { stdout, result } = parseOutput(error);
+      appendOutput('history-output-ok', stdout);
+      appendOutput('history-output-err', result);
     }
 
     element.target.value = '';
@@ -38,3 +42,17 @@ const terminal = document.getElementById('terminal');
 terminal.addEventListener('click', _ => {
   inputField.focus();
 });
+
+// TODO Better way to pass structs from WASM to JS.
+const parseOutput = (output) => {
+  console.info(output);
+  const splitted = output.split("|");
+  if (splitted.length !== 2) {
+    throw new Error("Unexpected number of elements after parsing string from WASM")
+  }
+
+  return {
+    stdout: splitted[0],
+    result: splitted[1],
+  };
+}

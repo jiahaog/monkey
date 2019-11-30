@@ -23,7 +23,7 @@ impl Applicable for Object {
 
 impl Applicable for BuiltIn {
     fn apply(self, env: Env, args: Vec<Expression>) -> EvalResult {
-        let objects = eval_exprs(env, args)?;
+        let objects = eval_exprs(env.clone(), args)?;
 
         match (self, objects.as_slice()) {
             (BuiltIn::Len, [Object::Str(val)]) => Ok(Object::Integer(val.len() as isize)),
@@ -103,6 +103,16 @@ impl Applicable for BuiltIn {
                     wrong_num_args.len()
                 ),
             }),
+            (BuiltIn::Print, args) => {
+                let stdout = args
+                    .iter()
+                    .map(|obj| obj.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ");
+
+                env.write_stdout(stdout);
+                Ok(Object::Null)
+            }
         }
         .map_err(|err| err.into())
     }

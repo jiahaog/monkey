@@ -24,6 +24,7 @@ pub enum BuiltIn {
     Index,
     Push,
     Rest,
+    Print,
 }
 
 impl BuiltIn {
@@ -31,6 +32,7 @@ impl BuiltIn {
         env.set("len".to_string(), Object::BuiltIn(BuiltIn::Len));
         env.set("push".to_string(), Object::BuiltIn(BuiltIn::Push));
         env.set("rest".to_string(), Object::BuiltIn(BuiltIn::Rest));
+        env.set("print".to_string(), Object::BuiltIn(BuiltIn::Print));
         // Not all built-ins are here such as `Index` because it can be called using `[$index]`.
         // This allows us to reuse the apply logic of the built-ins for operators.
         env
@@ -39,12 +41,17 @@ impl BuiltIn {
 
 impl fmt::Display for BuiltIn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            BuiltIn::Len => write!(f, "<built-in function len>"),
-            BuiltIn::Index => write!(f, "<built-in function index>"),
-            BuiltIn::Push => write!(f, "<built-in function push>"),
-            BuiltIn::Rest => write!(f, "<built-in function rest>"),
-        }
+        write!(
+            f,
+            "<built-in function {}>",
+            match self {
+                BuiltIn::Len => "len",
+                BuiltIn::Index => "index",
+                BuiltIn::Push => "push",
+                BuiltIn::Rest => "rest",
+                BuiltIn::Print => "print",
+            }
+        )
     }
 }
 
