@@ -27,6 +27,7 @@ impl Applicable for BuiltIn {
 
         match (self, objects.as_slice()) {
             (BuiltIn::Len, [Object::Str(val)]) => Ok(Object::Integer(val.len() as isize)),
+            (BuiltIn::Len, [Object::List(vals)]) => Ok(Object::Integer(vals.len() as isize)),
             (BuiltIn::Len, [wrong_list_type]) => Err(Error::TypeError {
                 message: format!(
                     "object of type '{}' has no len()",
