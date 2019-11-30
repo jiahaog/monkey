@@ -426,6 +426,10 @@ fn test_eval_builtin_expr() {
         (r#"len("")"#, Object::Integer(0)),
         (r#"len("four")"#, Object::Integer(4)),
         (r#"len("hello world")"#, Object::Integer(11)),
+        (
+            "push([0], 3)",
+            Object::List(vec![Object::Integer(0), Object::Integer(3)]),
+        ),
     ];
 
     for (inp, expected) in cases {

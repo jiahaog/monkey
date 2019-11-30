@@ -65,7 +65,24 @@ impl Applicable for BuiltIn {
             }),
             (BuiltIn::Index, wrong_num_args) => Err(Error::TypeError {
                 message: format!(
-                    "index() takes exactly one argument ({} given)",
+                    "index() takes exactly two arguments ({} given)",
+                    wrong_num_args.len()
+                ),
+            }),
+            (BuiltIn::Push, [Object::List(old_vals), new_element]) => {
+                let mut new = old_vals.clone();
+                new.push(new_element.clone());
+                Ok(Object::List(new))
+            }
+            (BuiltIn::Push, [wrong_list_type, _]) => Err(Error::TypeError {
+                message: format!(
+                    "object of type '{}' has no push",
+                    wrong_list_type.type_str()
+                ),
+            }),
+            (BuiltIn::Push, wrong_num_args) => Err(Error::TypeError {
+                message: format!(
+                    "push() takes exactly two arguments ({} given)",
                     wrong_num_args.len()
                 ),
             }),
