@@ -7,7 +7,7 @@ pub type Instructions = Vec<u8>;
 
 type OpCode = u8;
 
-const OP_CONSTANT: OpCode = 1;
+pub const OP_CONSTANT: OpCode = 1;
 
 #[derive(Clone)]
 struct Definition {
@@ -32,7 +32,7 @@ fn lookup(opcode: OpCode) -> Definition {
 }
 
 // TODO change to signed integers
-fn make(opcode: OpCode, operands: &[u16]) -> Vec<u8> {
+pub fn make(opcode: OpCode, operands: Vec<u16>) -> Vec<u8> {
   let definition = lookup(opcode);
 
   let instruction_len: isize = definition.operand_widths.iter().sum();
