@@ -1,6 +1,6 @@
 use self::Error::*;
-use super::object::Object;
 use crate::ast::{Expression, Operator};
+use crate::object::Object;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]

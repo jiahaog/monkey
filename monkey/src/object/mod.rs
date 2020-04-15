@@ -1,6 +1,8 @@
-use super::Env;
+mod env;
+
 use crate::ast;
 use crate::ast::{format_vec, Statements};
+pub use env::Env;
 use std::convert::From;
 use std::fmt;
 use std::rc::Rc;
@@ -25,18 +27,6 @@ pub enum BuiltIn {
     Push,
     Rest,
     Print,
-}
-
-impl BuiltIn {
-    pub fn register(env: Env) -> Env {
-        env.set("len".to_string(), Object::BuiltIn(BuiltIn::Len));
-        env.set("push".to_string(), Object::BuiltIn(BuiltIn::Push));
-        env.set("rest".to_string(), Object::BuiltIn(BuiltIn::Rest));
-        env.set("print".to_string(), Object::BuiltIn(BuiltIn::Print));
-        // Not all built-ins are here such as `Index` because it can be called using `[$index]`.
-        // This allows us to reuse the apply logic of the built-ins for operators.
-        env
-    }
 }
 
 impl fmt::Display for BuiltIn {

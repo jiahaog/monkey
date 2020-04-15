@@ -1,6 +1,7 @@
 use crate::ast::{Expression, Operator, Statement};
-use crate::eval::{object, Env, Error, Object};
+use crate::eval::Error;
 use crate::lexer::Lexer;
+use crate::object::{Env, Function, Object, NULL};
 use crate::parser::Parser;
 use std::rc::Rc;
 
@@ -293,7 +294,7 @@ fn test_list_index_expr() {
 fn test_fn_object() {
     let cases = vec![(
         "fn(x, y) { x + y }",
-        Object::Function(object::Function {
+        Object::Function(Function {
             params: Rc::new(vec!["x".to_string(), "y".to_string()]),
             body: Rc::new(vec![Statement::Expression(Expression::Infix {
                 operator: Operator::Plus,
@@ -311,7 +312,7 @@ fn test_fn_object() {
 
 #[test]
 fn test_fn_let_statment_returns_null() {
-    let cases = vec![("let a = fn() { 1 }", object::NULL)];
+    let cases = vec![("let a = fn() { 1 }", NULL)];
 
     for (inp, expected) in cases {
         test_eval(expected, inp);
@@ -324,7 +325,7 @@ fn test_fn_stack_overflow_during_fmt_debug() {
     // NULL doesn't match the identifier for `a`, and the debug statement should be triggered by
     // assert equals. Since functions have a rc to the environment, the debug statement will
     // recursively call itself and stack overflow unless overriden. (Stack overflow != panic)
-    let cases = vec![("let a = fn() { 1 }; a", object::NULL)];
+    let cases = vec![("let a = fn() { 1 }; a", NULL)];
 
     for (inp, expected) in cases {
         test_eval(expected, inp);

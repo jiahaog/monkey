@@ -1,8 +1,7 @@
-use super::env::Env;
 use super::error::Error;
 use super::eval::{eval_exprs, Eval, EvalResult};
-use super::object::{BuiltIn, Function, Object};
 use crate::ast::Expression;
+use crate::object::{BuiltIn, Env, Function, Object};
 
 pub trait Applicable {
     fn apply(self, env: Env, arguments: Vec<Expression>) -> EvalResult;

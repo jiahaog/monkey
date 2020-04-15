@@ -1,19 +1,15 @@
 mod apply;
-mod env;
 mod error;
 mod eval;
-mod object;
 
 #[cfg(test)]
 mod tests;
 
 use self::apply::Applicable;
-pub use self::env::Env;
 pub use self::error::Error;
 use self::eval::{eval_exprs, Eval, EvalResult, ShortCircuit};
-use self::object::NULL;
-pub use self::object::{BuiltIn, Object};
 use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
+use crate::object::{BuiltIn, Env, Function, Object, NULL};
 
 impl Program {
     pub fn evaluate(self, env: Env) -> Result<Object, Error> {
@@ -93,7 +89,7 @@ impl Eval for Expression {
                 alternative,
             } => eval_if_expr(env, condition, consequence, alternative),
             Expression::FunctionLiteral(ast_func) => {
-                Object::Function(object::Function::new(env.clone(), ast_func)).into()
+                Object::Function(Function::new(env.clone(), ast_func)).into()
             }
             Expression::Call {
                 function,
@@ -107,16 +103,14 @@ impl Eval for Expression {
                         }
                         .into(),
                     ),
-                    CallFunctionExpression::Literal(ast_func) => Ok(Object::Function(
-                        object::Function::new(env.clone(), ast_func),
-                    )),
+                    CallFunctionExpression::Literal(ast_func) => {
+                        Ok(Object::Function(Function::new(env.clone(), ast_func)))
+                    }
                 };
 
                 func_result?.apply(env, arguments)
             }
-            Expression::Index { left, index } => {
-                object::BuiltIn::Index.apply(env, vec![*left, *index])
-            }
+            Expression::Index { left, index } => BuiltIn::Index.apply(env, vec![*left, *index]),
         }
     }
 }

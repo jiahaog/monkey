@@ -1,7 +1,6 @@
-use super::env::Env;
 use super::error::Error;
-use super::object::Object;
 use crate::ast::Expression;
+use crate::object::{Env, Object};
 use std::convert::From;
 use std::iter::FromIterator;
 

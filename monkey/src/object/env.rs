@@ -1,4 +1,4 @@
-use super::object::{BuiltIn, Object};
+use super::{BuiltIn, Object};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::mem;
@@ -10,26 +10,36 @@ type EnvRef = Rc<RefCell<_Env>>;
 #[derive(Debug)]
 pub struct Env(EnvRef);
 
+fn register_built_ins(env: Env) -> Env {
+    env.set("len".to_string(), Object::BuiltIn(BuiltIn::Len));
+    env.set("push".to_string(), Object::BuiltIn(BuiltIn::Push));
+    env.set("rest".to_string(), Object::BuiltIn(BuiltIn::Rest));
+    env.set("print".to_string(), Object::BuiltIn(BuiltIn::Print));
+    // Not all built-ins are here such as `Index` because it can be called using `[$index]`.
+    // This allows us to reuse the apply logic of the built-ins for operators.
+    env
+}
+
 impl Env {
     pub fn new() -> Self {
         let env = Env(Rc::new(RefCell::new(_Env::new())));
-        BuiltIn::register(env)
+        register_built_ins(env)
     }
 
-    pub(super) fn new_extending(parent: Self) -> Self {
+    pub(crate) fn new_extending(parent: Self) -> Self {
         let new_env = _Env::new_extending(parent.clone());
         Env(Rc::new(RefCell::new(new_env)))
     }
 
-    pub(super) fn get(&self, key: &String) -> Option<Object> {
+    pub(crate) fn get(&self, key: &String) -> Option<Object> {
         self.0.borrow().get(key)
     }
 
-    pub(super) fn set(&self, key: String, val: Object) {
+    pub(crate) fn set(&self, key: String, val: Object) {
         self.0.borrow_mut().set(key, val);
     }
 
-    pub(super) fn write_stdout(&self, msg: String) {
+    pub(crate) fn write_stdout(&self, msg: String) {
         self.0.borrow_mut().write_stdout(msg);
     }
 

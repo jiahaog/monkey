@@ -3,12 +3,13 @@ mod bytecode;
 mod compiler;
 mod eval;
 mod lexer;
+mod object;
 mod parser;
 mod token;
 
 use crate::eval::Error as EvalError;
-use crate::eval::{Env, Object};
 use crate::lexer::Lexer;
+use crate::object::{Env, Object};
 use crate::parser::{ParseError, Parser};
 use std::fmt::{Display, Formatter};
 
