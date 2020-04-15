@@ -5,7 +5,7 @@ use crate::parser::{ParseError, ParseErrorExpected};
 use crate::token::Token;
 
 impl<'a> Parser<'a> {
-    pub(super) fn parse_list_expression(&mut self) -> Result<Expression, ParseError> {
+    pub fn parse_list_expression(&mut self) -> Result<Expression, ParseError> {
         self.chomp_list_values(Vec::new())
             .and_then(|expr| match self.lexer.peek() {
                 Some(Token::RBracket) => {

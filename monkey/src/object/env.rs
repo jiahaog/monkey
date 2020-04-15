@@ -26,20 +26,20 @@ impl Env {
         register_built_ins(env)
     }
 
-    pub(crate) fn new_extending(parent: Self) -> Self {
+    pub fn new_extending(parent: Self) -> Self {
         let new_env = _Env::new_extending(parent.clone());
         Env(Rc::new(RefCell::new(new_env)))
     }
 
-    pub(crate) fn get(&self, key: &String) -> Option<Object> {
+    pub fn get(&self, key: &String) -> Option<Object> {
         self.0.borrow().get(key)
     }
 
-    pub(crate) fn set(&self, key: String, val: Object) {
+    pub fn set(&self, key: String, val: Object) {
         self.0.borrow_mut().set(key, val);
     }
 
-    pub(crate) fn write_stdout(&self, msg: String) {
+    pub fn write_stdout(&self, msg: String) {
         self.0.borrow_mut().write_stdout(msg);
     }
 
@@ -70,7 +70,7 @@ struct _Env {
 }
 
 impl _Env {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             store: HashMap::new(),
             parent: None,
@@ -78,13 +78,13 @@ impl _Env {
         }
     }
 
-    pub(super) fn new_extending(parent: Env) -> Self {
+    fn new_extending(parent: Env) -> Self {
         let mut result = Self::new();
         result.parent = Some(parent);
         result
     }
 
-    pub(super) fn get(&self, key: &String) -> Option<Object> {
+    fn get(&self, key: &String) -> Option<Object> {
         match (self.store.get(key).cloned(), &self.parent) {
             (Some(x), _) => Some(x),
             (None, Some(parent)) => parent.get(key),
@@ -92,20 +92,20 @@ impl _Env {
         }
     }
 
-    pub(super) fn set(&mut self, key: String, val: Object) {
+    fn set(&mut self, key: String, val: Object) {
         self.store.insert(key, val);
     }
 
     // TODO: More performant way to always write and read the stdout instead of going up the tree.
 
-    pub(super) fn write_stdout(&mut self, msg: String) {
+    fn write_stdout(&mut self, msg: String) {
         match &self.parent {
             None => self.stdout.push(msg),
             Some(parent) => parent.write_stdout(msg),
         }
     }
 
-    pub(super) fn pop_stdout(&mut self) -> Vec<String> {
+    fn pop_stdout(&mut self) -> Vec<String> {
         match &self.parent {
             None => mem::replace(&mut self.stdout, Vec::new()),
             Some(parent) => parent.pop_stdout(),

@@ -4,7 +4,7 @@ use crate::parser::{ParseError, ParseErrorExpected};
 use crate::token::Token;
 
 impl<'a> Parser<'a> {
-    pub(super) fn parse_function_expression(&mut self) -> Result<Expression, ParseError> {
+    pub fn parse_function_expression(&mut self) -> Result<Expression, ParseError> {
         self.parse_function_params()
             .and_then(|params| self.parse_function_body().map(|body| (params, body)))
             .map(|(params, body)| {

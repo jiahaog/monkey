@@ -5,7 +5,7 @@ use crate::parser::{ParseError, ParseErrorExpected};
 use crate::token::Token;
 
 impl<'a> Parser<'a> {
-    pub(super) fn parse_call_expression(
+    pub fn parse_call_expression(
         &mut self,
         function: Expression,
     ) -> Result<Expression, ParseError> {

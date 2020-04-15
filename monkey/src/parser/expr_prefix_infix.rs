@@ -5,10 +5,7 @@ use crate::parser::{ParseError, ParseErrorExpected};
 use crate::token::Token;
 
 impl<'a> Parser<'a> {
-    pub(super) fn next_expression(
-        &mut self,
-        precedence: Precedence,
-    ) -> Result<Expression, ParseError> {
+    pub fn next_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
         self.lexer
             .next()
             .ok_or(ParseError {

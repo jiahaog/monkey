@@ -5,7 +5,7 @@ use crate::parser::{ParseError, ParseErrorExpected};
 use crate::token::Token;
 
 impl<'a> Parser<'a> {
-    pub(super) fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
+    pub fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
         self.parse_if_expression_conditional()
             .and_then(|conditional| {
                 self.parse_if_expression_consequence()
