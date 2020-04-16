@@ -2,6 +2,8 @@ use crate::ast;
 use crate::bytecode;
 use crate::object::Object;
 use std::ops;
+
+#[cfg(test)]
 mod tests;
 
 fn compile(program: ast::Program) -> Result<Bytecode, Error> {
@@ -19,11 +21,7 @@ impl Node for ast::Program {
       .statements
       .into_iter()
       .fold(Ok(bytecode), |acc, statement| {
-        match acc {
-          Ok(prev) => statement.compile(prev),
-          Err(_) => acc,
-        }
-        // acc + statement.compile()?
+        acc.and_then(|prev| statement.compile(prev))
       })
   }
 }
@@ -69,14 +67,14 @@ impl Node for ast::Expression {
 struct Error {}
 
 struct Bytecode {
-  instructions: bytecode::Instructions,
+  bytes: bytecode::Bytes,
   constants: Vec<Object>,
 }
 
 impl Bytecode {
   fn new() -> Self {
     Self {
-      instructions: Vec::new(),
+      bytes: bytecode::Bytes::empty(),
       constants: Vec::new(),
     }
   }
@@ -85,13 +83,12 @@ impl Bytecode {
     let mut constants = self.constants;
     constants.push(object);
 
-    let mut instructions = self.instructions;
-    let mut new_instruction =
-      bytecode::make(bytecode::OP_CONSTANT, vec![(constants.len() - 1) as u16]);
-    instructions.append(&mut new_instruction);
+    let prev_bytes = self.bytes;
+    let bytes =
+      bytecode::Instruction::new(bytecode::OP_CONSTANT, vec![(constants.len() - 1) as u16]).make();
 
     Self {
-      instructions,
+      bytes: prev_bytes + bytes,
       constants,
     }
   }
@@ -100,15 +97,11 @@ impl Bytecode {
 impl ops::Add<Bytecode> for Bytecode {
   type Output = Bytecode;
   fn add(self, mut other: Bytecode) -> Bytecode {
-    let mut instructions = self.instructions;
-    instructions.append(&mut other.instructions);
+    let bytes = self.bytes + other.bytes;
 
     let mut constants = self.constants;
     constants.append(&mut other.constants);
 
-    Self {
-      instructions,
-      constants,
-    }
+    Self { bytes, constants }
   }
 }

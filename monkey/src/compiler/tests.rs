@@ -1,4 +1,4 @@
-use super::*;
+use super::compile;
 use crate::ast::Program;
 use crate::bytecode;
 use crate::lexer::Lexer;
@@ -11,28 +11,24 @@ fn test_integer_arithmetic() {
     "1 + 2",
     vec![Object::Integer(1), Object::Integer(2)],
     vec![
-      bytecode::make(bytecode::OP_CONSTANT, vec![0]),
-      bytecode::make(bytecode::OP_CONSTANT, vec![1]),
+      bytecode::Instruction::new(bytecode::OP_CONSTANT, vec![0]).make(),
+      bytecode::Instruction::new(bytecode::OP_CONSTANT, vec![1]).make(),
     ],
   )];
 
   for (input, expected_constants, expected_instructions) in tests {
-    // let received = make(opcode, operand.as_slice());
-
     let program = parse(input).unwrap();
 
     let bytecode = compile(program).unwrap();
-    // let compiler = Compiler::new();
-    // compiler.compile(program);
 
-    test_instructions(expected_instructions, bytecode.instructions);
+    test_bytes(expected_instructions, bytecode.bytes);
 
     test_constants(expected_constants, bytecode.constants);
   }
 }
 
-fn test_instructions(expected: Vec<bytecode::Instructions>, received: bytecode::Instructions) {
-  let concatenated: bytecode::Instructions = expected.into_iter().flatten().collect();
+fn test_bytes(expected: Vec<bytecode::Bytes>, received: bytecode::Bytes) {
+  let concatenated: bytecode::Bytes = expected.into_iter().sum();
   assert_eq!(concatenated, received);
 }
 

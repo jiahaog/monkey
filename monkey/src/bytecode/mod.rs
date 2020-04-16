@@ -1,9 +1,72 @@
 use std::collections::HashMap;
+use std::fmt;
+use std::iter;
+use std::ops;
 
 #[cfg(test)]
 mod tests;
 
-pub type Instructions = Vec<u8>;
+pub struct Instruction {
+  opcode: OpCode,
+  // TODO change to signed integers
+  operands: Vec<u16>,
+}
+
+impl Instruction {
+  pub fn new(opcode: OpCode, operands: Vec<u16>) -> Self {
+    Self { opcode, operands }
+  }
+
+  // TODO change to use From trait?
+  pub fn make(self) -> Bytes {
+    let definition = lookup(self.opcode);
+
+    // TODO get rid of this?
+    // let instruction_len: isize = definition.operand_widths.iter().sum();
+
+    let mut bytes = Vec::new();
+    bytes.push(self.opcode);
+
+    for operand in self.operands.iter() {
+      // We don't need to check operand_widths because of type safety.
+
+      let byte_slice = operand.to_be_bytes();
+      bytes.extend_from_slice(&byte_slice);
+    }
+
+    Bytes::new(bytes)
+  }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Bytes(Vec<u8>);
+
+impl Bytes {
+  fn new(bytes: Vec<u8>) -> Self {
+    Self(bytes)
+  }
+
+  pub fn empty() -> Self {
+    Self(Vec::new())
+  }
+}
+
+impl ops::Add<Bytes> for Bytes {
+  type Output = Bytes;
+  fn add(self, mut other: Bytes) -> Bytes {
+    let mut bytes = self.0;
+
+    bytes.append(&mut other.0);
+
+    Self(bytes)
+  }
+}
+
+impl iter::Sum for Bytes {
+  fn sum<I: Iterator<Item = Bytes>>(iter: I) -> Self {
+    iter.fold(Bytes::empty(), |acc, x| acc + x)
+  }
+}
 
 type OpCode = u8;
 
@@ -31,21 +94,9 @@ fn lookup(opcode: OpCode) -> Definition {
   definitions[&opcode].clone()
 }
 
-// TODO change to signed integers
-pub fn make(opcode: OpCode, operands: Vec<u16>) -> Vec<u8> {
-  let definition = lookup(opcode);
-
-  let instruction_len: isize = definition.operand_widths.iter().sum();
-
-  let mut instruction = Vec::new();
-  instruction.push(opcode);
-
-  for (i, operand) in operands.iter().enumerate() {
-    // We don't need to check operand_widths because of type safety.
-
-    let bytes = operand.to_be_bytes();
-    instruction.extend_from_slice(&bytes);
+impl fmt::Display for Bytes {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    // todo!()
+    write!(f, "hello")
   }
-
-  instruction
 }
