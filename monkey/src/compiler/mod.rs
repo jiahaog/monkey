@@ -52,7 +52,6 @@ impl Node for ast::Expression {
         Ok(right_result)
       }
       ast::Expression::IntegerLiteral(value) => {
-        println!("HELLO?");
         let object = Object::Integer(value as isize);
 
         Ok(bytecode.op_constant(object))
@@ -81,11 +80,11 @@ impl Bytecode {
 
   fn op_constant(self, object: Object) -> Self {
     let mut constants = self.constants;
+    let i = constants.len();
     constants.push(object);
 
     let prev_bytes = self.bytes;
-    let bytes =
-      bytecode::Instruction::new(bytecode::OP_CONSTANT, vec![(constants.len() - 1) as u16]).make();
+    let bytes = bytecode::Instruction::OpConstant(i as u16).into();
 
     Self {
       bytes: prev_bytes + bytes,

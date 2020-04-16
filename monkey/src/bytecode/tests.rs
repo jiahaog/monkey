@@ -1,44 +1,42 @@
+use super::Instruction::*;
 use super::*;
 
 #[test]
-fn test_make() {
-  let tests = vec![(
-    OP_CONSTANT,
-    vec![65535],
-    Bytes::new(vec![OP_CONSTANT, 255, 255]),
-  )];
+fn test_instruction_to_bytes() {
+  let tests = vec![
+    (OpConstant(65535), Bytes::new(vec![OP_CONSTANT, 255, 255])),
+    // Test big-endian.
+    (OpConstant(65534), Bytes::new(vec![OP_CONSTANT, 255, 254])),
+  ];
 
-  for (opcode, operand, expected) in tests {
-    let received = Instruction::new(opcode, operand).make();
+  for (instruction, expected) in tests {
+    let bytes = instruction.into();
 
-    assert_eq!(expected, received);
+    assert_eq!(expected, bytes);
+  }
+}
+
+// TODO
+#[ignore]
+#[test]
+fn test_fmt_instruction() {
+  let tests = vec![
+    (OpConstant(1), "OpConstant 1"),
+    (OpConstant(2), "OpConstant 2"),
+    (OpConstant(65535), "OpConstant 65535"),
+  ];
+
+  for (instruction, expected) in tests {
+    assert_eq!(expected, format!("{}", instruction));
   }
 }
 
 #[test]
-fn test_disassemble_bytecode() {
-  // TODO split this into fmt a Instruction, and reading bytes into a Instruction.
-  let byte_vec = vec![
-    Instruction::new(OP_CONSTANT, vec![1]).make(),
-    Instruction::new(OP_CONSTANT, vec![2]).make(),
-    Instruction::new(OP_CONSTANT, vec![65535]).make(),
-  ];
+fn test_bytes_to_instruction() {}
 
-  let expected = "0000 OpConstant 1
-0003 OpConstant 2
-0006 OpConstant 65535";
-
-  let bytes: Bytes = byte_vec.into_iter().sum();
-
-  assert_eq!(expected, format!("{}", bytes));
+#[test]
+fn test_bytes_disassembled_fmt() {
+  //   let expected = "0000 OpConstant 1
+  // 0003 OpConstant 2
+  // 0006 OpConstant 65535";
 }
-
-// #[test]
-// fn test_read_operands() {
-//   let tests = vec![(OP_CONSTANT, vec![65535], 2)];
-
-//   for (op_code, operands, expected_bytes_read) in tests {
-//     let bytecode = Instruction::new(op_code, operands).make();
-//     todo!()
-//   }
-// }
