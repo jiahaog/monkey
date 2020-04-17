@@ -16,8 +16,6 @@ fn test_instruction_to_bytes() {
   }
 }
 
-// TODO
-#[ignore]
 #[test]
 fn test_fmt_instruction() {
   let tests = vec![
@@ -32,11 +30,33 @@ fn test_fmt_instruction() {
 }
 
 #[test]
-fn test_bytes_to_instruction() {}
+fn test_bytes_to_instruction() {
+  let tests = vec![(
+    Bytes::new(vec![OP_CONSTANT, 255, 255]),
+    vec![OpConstant(65535)],
+  )];
+
+  for (bytes, expected_instructions) in tests {
+    let results: Result<Vec<Instruction>, Error> = bytes.into_iter().collect();
+    assert_eq!(expected_instructions, results.unwrap());
+  }
+}
 
 #[test]
-fn test_bytes_disassembled_fmt() {
-  //   let expected = "0000 OpConstant 1
-  // 0003 OpConstant 2
-  // 0006 OpConstant 65535";
+fn test_bytes_disassembled_display() {
+  let tests = vec![(
+    vec![
+      Bytes::new(vec![OP_CONSTANT, 0, 1]),
+      Bytes::new(vec![OP_CONSTANT, 0, 2]),
+      Bytes::new(vec![OP_CONSTANT, 255, 255]),
+    ],
+    "0000 OpConstant 1
+0003 OpConstant 2
+0006 OpConstant 65535",
+  )];
+
+  for (bytes, expected) in tests {
+    let all_bytes: Bytes = bytes.into_iter().sum();
+    assert_eq!(expected, format!("{}", all_bytes))
+  }
 }
