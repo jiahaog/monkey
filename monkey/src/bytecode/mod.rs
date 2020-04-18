@@ -9,150 +9,150 @@ mod tests;
 
 #[derive(PartialEq, Debug)]
 pub enum Instruction {
-  // pointer to the constant
-  OpConstant(u16),
+    // pointer to the constant
+    OpConstant(u16),
 }
 use Instruction::*;
 
 impl Instruction {
-  fn opcode(&self) -> OpCode {
-    match self {
-      OpConstant(_) => OP_CONSTANT,
+    fn opcode(&self) -> OpCode {
+        match self {
+            OpConstant(_) => OP_CONSTANT,
+        }
     }
-  }
 
-  fn opcode_name(&self) -> &str {
-    match self {
-      OpConstant(_) => "OpConstant",
+    fn opcode_name(&self) -> &str {
+        match self {
+            OpConstant(_) => "OpConstant",
+        }
     }
-  }
 
-  fn size(&self) -> usize {
-    let operand_size = match self {
-      OpConstant(_) => 2,
-    };
+    fn size(&self) -> usize {
+        let operand_size = match self {
+            OpConstant(_) => 2,
+        };
 
-    operand_size + 1
-  }
+        operand_size + 1
+    }
 }
 
 impl fmt::Display for Instruction {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let operand = match self {
-      OpConstant(pointer) => pointer,
-    };
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let operand = match self {
+            OpConstant(pointer) => pointer,
+        };
 
-    write!(f, "{} {}", self.opcode_name(), operand)
-  }
+        write!(f, "{} {}", self.opcode_name(), operand)
+    }
 }
 
 #[derive(Debug)]
 pub struct Error {}
 
 impl From<Instruction> for Bytes {
-  fn from(instruction: Instruction) -> Self {
-    use Instruction::*;
+    fn from(instruction: Instruction) -> Self {
+        use Instruction::*;
 
-    let mut bytes = vec![instruction.opcode()];
+        let mut bytes = vec![instruction.opcode()];
 
-    match instruction {
-      OpConstant(pointer) => {
-        let byte_slice = pointer.to_be_bytes();
-        bytes.extend_from_slice(&byte_slice);
+        match instruction {
+            OpConstant(pointer) => {
+                let byte_slice = pointer.to_be_bytes();
+                bytes.extend_from_slice(&byte_slice);
 
-        Bytes::new(bytes)
-      }
+                Bytes::new(bytes)
+            }
+        }
     }
-  }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Bytes(pub Vec<u8>);
 
 impl Bytes {
-  fn new(bytes: Vec<u8>) -> Self {
-    Self(bytes)
-  }
+    fn new(bytes: Vec<u8>) -> Self {
+        Self(bytes)
+    }
 
-  pub fn empty() -> Self {
-    Self(Vec::new())
-  }
+    pub fn empty() -> Self {
+        Self(Vec::new())
+    }
 }
 
 impl ops::Add<Bytes> for Bytes {
-  type Output = Bytes;
-  fn add(self, mut other: Bytes) -> Bytes {
-    let mut bytes = self.0;
+    type Output = Bytes;
+    fn add(self, mut other: Bytes) -> Bytes {
+        let mut bytes = self.0;
 
-    bytes.append(&mut other.0);
+        bytes.append(&mut other.0);
 
-    Self(bytes)
-  }
+        Self(bytes)
+    }
 }
 
 impl iter::Sum for Bytes {
-  fn sum<I: Iterator<Item = Bytes>>(iter: I) -> Self {
-    iter.fold(Bytes::empty(), |acc, x| acc + x)
-  }
+    fn sum<I: Iterator<Item = Bytes>>(iter: I) -> Self {
+        iter.fold(Bytes::empty(), |acc, x| acc + x)
+    }
 }
 
 impl fmt::Display for Bytes {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let result = self
-      .clone()
-      .into_iter()
-      .collect::<Result<Vec<Instruction>, Error>>();
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let result = self
+            .clone()
+            .into_iter()
+            .collect::<Result<Vec<Instruction>, Error>>();
 
-    let display: String = match result {
-      Ok(instructions) => {
-        instructions
-          .into_iter()
-          .fold(
-            ("".into(), 0),
-            |(
-              acc, // The string to concatenate.
-              i,   // The starting index of the current instruction.
-            ),
-             instruction| {
-              (
-                format!("{}{:04} {}\n", acc, i, instruction),
-                i + instruction.size(),
-              )
-            },
-          )
-          .0
-      }
-      Err(error) => format!("{:?}", error),
-    };
-    write!(f, "{}", display.trim())
-  }
+        let display: String = match result {
+            Ok(instructions) => {
+                instructions
+                    .into_iter()
+                    .fold(
+                        ("".into(), 0),
+                        |(
+                            acc, // The string to concatenate.
+                            i,   // The starting index of the current instruction.
+                        ),
+                         instruction| {
+                            (
+                                format!("{}{:04} {}\n", acc, i, instruction),
+                                i + instruction.size(),
+                            )
+                        },
+                    )
+                    .0
+            }
+            Err(error) => format!("{:?}", error),
+        };
+        write!(f, "{}", display.trim())
+    }
 }
 
 impl IntoIterator for Bytes {
-  type Item = Result<Instruction, Error>;
-  type IntoIter = BytesIntoIter;
+    type Item = Result<Instruction, Error>;
+    type IntoIter = BytesIntoIter;
 
-  fn into_iter(self) -> Self::IntoIter {
-    BytesIntoIter(self.0.into_iter())
-  }
+    fn into_iter(self) -> Self::IntoIter {
+        BytesIntoIter(self.0.into_iter())
+    }
 }
 
 pub struct BytesIntoIter(std::vec::IntoIter<u8>);
 
 impl Iterator for BytesIntoIter {
-  type Item = Result<Instruction, Error>;
+    type Item = Result<Instruction, Error>;
 
-  fn next(&mut self) -> Option<Self::Item> {
-    let iter_mut = &mut self.0;
-    let mut byte_iter = iter_mut.map(|byte| Byte(byte));
+    fn next(&mut self) -> Option<Self::Item> {
+        let iter_mut = &mut self.0;
+        let mut byte_iter = iter_mut.map(|byte| Byte(byte));
 
-    byte_iter.next().map(|opcode| match opcode {
-      Byte(OP_CONSTANT) => byte_iter
-        .collect::<Result<u16, Error>>()
-        .map(|pointer| OpConstant(pointer)),
-      _ => unimplemented!(),
-    })
-  }
+        byte_iter.next().map(|opcode| match opcode {
+            Byte(OP_CONSTANT) => byte_iter
+                .collect::<Result<u16, Error>>()
+                .map(|pointer| OpConstant(pointer)),
+            _ => unimplemented!(),
+        })
+    }
 }
 
 /// Wrapper for a byte.
@@ -168,16 +168,16 @@ impl Iterator for BytesIntoIter {
 struct Byte(u8);
 
 impl iter::FromIterator<Byte> for Result<u16, Error> {
-  fn from_iter<I: IntoIterator<Item = Byte>>(iter: I) -> Self {
-    let bytes: Vec<u8> = iter.into_iter().take(2).map(|byte| byte.0).collect();
+    fn from_iter<I: IntoIterator<Item = Byte>>(iter: I) -> Self {
+        let bytes: Vec<u8> = iter.into_iter().take(2).map(|byte| byte.0).collect();
 
-    if bytes.len() != 2 {
-      return Err(Error {});
+        if bytes.len() != 2 {
+            return Err(Error {});
+        }
+
+        let mut array = [0; 2];
+        array.copy_from_slice(bytes.as_slice());
+
+        Ok(u16::from_be_bytes(array))
     }
-
-    let mut array = [0; 2];
-    array.copy_from_slice(bytes.as_slice());
-
-    Ok(u16::from_be_bytes(array))
-  }
 }

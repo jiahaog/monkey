@@ -7,58 +7,57 @@ use std::ops;
 mod tests;
 
 fn compile(program: ast::Program) -> Result<Bytecode, Error> {
-  program.compile(Bytecode::new())
+    program.compile(Bytecode::new())
 }
 
 // TODO implement this
 trait Node {
-  fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error>;
+    fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error>;
 }
 
 impl Node for ast::Program {
-  fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error> {
-    self
-      .statements
-      .into_iter()
-      .fold(Ok(bytecode), |acc, statement| {
-        acc.and_then(|prev| statement.compile(prev))
-      })
-  }
+    fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error> {
+        self.statements
+            .into_iter()
+            .fold(Ok(bytecode), |acc, statement| {
+                acc.and_then(|prev| statement.compile(prev))
+            })
+    }
 }
 
 impl Node for ast::Statement {
-  fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error> {
-    match self {
-      ast::Statement::Expression(expression) => expression.compile(bytecode),
-      _ => unimplemented!(),
+    fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error> {
+        match self {
+            ast::Statement::Expression(expression) => expression.compile(bytecode),
+            _ => unimplemented!(),
+        }
     }
-  }
 }
 
 impl Node for ast::Expression {
-  fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error> {
-    match self {
-      ast::Expression::Infix {
-        operator: _operator,
-        left,
-        right,
-      } => {
-        println!("left:{:?} right:{:?}", &left, &right);
-        let left_result = left.compile(bytecode)?;
-        let right_result = right.compile(left_result)?;
+    fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error> {
+        match self {
+            ast::Expression::Infix {
+                operator: _operator,
+                left,
+                right,
+            } => {
+                println!("left:{:?} right:{:?}", &left, &right);
+                let left_result = left.compile(bytecode)?;
+                let right_result = right.compile(left_result)?;
 
-        // TODO operator
+                // TODO operator
 
-        Ok(right_result)
-      }
-      ast::Expression::IntegerLiteral(value) => {
-        let object = Object::Integer(value as isize);
+                Ok(right_result)
+            }
+            ast::Expression::IntegerLiteral(value) => {
+                let object = Object::Integer(value as isize);
 
-        Ok(bytecode.op_constant(object))
-      }
-      _ => unimplemented!(),
+                Ok(bytecode.op_constant(object))
+            }
+            _ => unimplemented!(),
+        }
     }
-  }
 }
 
 // TODO implement this
@@ -66,41 +65,41 @@ impl Node for ast::Expression {
 struct Error {}
 
 struct Bytecode {
-  bytes: bytecode::Bytes,
-  constants: Vec<Object>,
+    bytes: bytecode::Bytes,
+    constants: Vec<Object>,
 }
 
 impl Bytecode {
-  fn new() -> Self {
-    Self {
-      bytes: bytecode::Bytes::empty(),
-      constants: Vec::new(),
+    fn new() -> Self {
+        Self {
+            bytes: bytecode::Bytes::empty(),
+            constants: Vec::new(),
+        }
     }
-  }
 
-  fn op_constant(self, object: Object) -> Self {
-    let mut constants = self.constants;
-    let i = constants.len();
-    constants.push(object);
+    fn op_constant(self, object: Object) -> Self {
+        let mut constants = self.constants;
+        let i = constants.len();
+        constants.push(object);
 
-    let prev_bytes = self.bytes;
-    let bytes = bytecode::Instruction::OpConstant(i as u16).into();
+        let prev_bytes = self.bytes;
+        let bytes = bytecode::Instruction::OpConstant(i as u16).into();
 
-    Self {
-      bytes: prev_bytes + bytes,
-      constants,
+        Self {
+            bytes: prev_bytes + bytes,
+            constants,
+        }
     }
-  }
 }
 
 impl ops::Add<Bytecode> for Bytecode {
-  type Output = Bytecode;
-  fn add(self, mut other: Bytecode) -> Bytecode {
-    let bytes = self.bytes + other.bytes;
+    type Output = Bytecode;
+    fn add(self, mut other: Bytecode) -> Bytecode {
+        let bytes = self.bytes + other.bytes;
 
-    let mut constants = self.constants;
-    constants.append(&mut other.constants);
+        let mut constants = self.constants;
+        constants.append(&mut other.constants);
 
-    Self { bytes, constants }
-  }
+        Self { bytes, constants }
+    }
 }
