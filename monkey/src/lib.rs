@@ -6,6 +6,7 @@ mod lexer;
 mod object;
 mod parser;
 mod token;
+mod vm;
 
 use crate::eval::Error as EvalError;
 use crate::lexer::Lexer;

@@ -1,4 +1,4 @@
-use super::compile;
+use super::*;
 use crate::ast::Program;
 use crate::bytecode;
 use crate::lexer::Lexer;
@@ -21,10 +21,7 @@ fn test_integer_arithmetic() {
 
         let bytecode = compile(program).unwrap();
 
-        let expected_bytes: bytecode::Bytes =
-            expected_instructions.into_iter().map(|x| x.into()).sum();
-
-        assert_eq!(expected_bytes, bytecode.bytes);
+        assert_eq!(expected_instructions, bytecode.instructions);
 
         test_constants(expected_constants, bytecode.constants);
     }

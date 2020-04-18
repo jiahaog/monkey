@@ -6,7 +6,7 @@ use std::ops;
 #[cfg(test)]
 mod tests;
 
-fn compile(program: ast::Program) -> Result<Bytecode, Error> {
+pub fn compile(program: ast::Program) -> Result<Bytecode, Error> {
     program.compile(Bytecode::new())
 }
 
@@ -62,44 +62,45 @@ impl Node for ast::Expression {
 
 // TODO implement this
 #[derive(Debug)]
-struct Error {}
+pub struct Error {}
 
-struct Bytecode {
-    bytes: bytecode::Bytes,
-    constants: Vec<Object>,
+pub struct Bytecode {
+    pub instructions: Vec<bytecode::Instruction>,
+    pub constants: Vec<Object>,
 }
 
 impl Bytecode {
     fn new() -> Self {
         Self {
-            bytes: bytecode::Bytes::empty(),
+            instructions: Vec::new(),
             constants: Vec::new(),
         }
     }
 
-    fn op_constant(self, object: Object) -> Self {
-        let mut constants = self.constants;
-        let i = constants.len();
-        constants.push(object);
+    fn op_constant(mut self, object: Object) -> Self {
+        let i = self.constants.len();
+        self.constants.push(object);
 
-        let prev_bytes = self.bytes;
-        let bytes = bytecode::Instruction::OpConstant(i as u16).into();
+        let instruction = bytecode::Instruction::OpConstant(i as u16);
+
+        self.instructions.push(instruction);
 
         Self {
-            bytes: prev_bytes + bytes,
-            constants,
+            instructions: self.instructions,
+            constants: self.constants,
         }
     }
 }
 
 impl ops::Add<Bytecode> for Bytecode {
     type Output = Bytecode;
-    fn add(self, mut other: Bytecode) -> Bytecode {
-        let bytes = self.bytes + other.bytes;
+    fn add(mut self, mut other: Bytecode) -> Bytecode {
+        self.instructions.append(&mut other.instructions);
+        self.constants.append(&mut other.constants);
 
-        let mut constants = self.constants;
-        constants.append(&mut other.constants);
-
-        Self { bytes, constants }
+        Self {
+            instructions: self.instructions,
+            constants: self.constants,
+        }
     }
 }
