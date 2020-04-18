@@ -1,13 +1,24 @@
 use super::Instruction::*;
+
 use super::*;
+
+macro_rules! bytes {
+    ($( $x:expr ),* ) => {{
+        let temp_vec = vec![
+            $($x  ,)*
+        ];
+
+        Bytes::new(temp_vec)
+    }};
+}
 
 #[test]
 fn test_instruction_to_bytes() {
     let tests = vec![
-        (OpConstant(65535), Bytes::new(vec![OP_CONSTANT, 255, 255])),
+        (OpConstant(65535), bytes![OP_CONSTANT, 255, 255]),
         // Test big-endian.
-        (OpConstant(65534), Bytes::new(vec![OP_CONSTANT, 255, 254])),
-        (OpAdd, Bytes::new(vec![OP_ADD])),
+        (OpConstant(65534), bytes![OP_CONSTANT, 255, 254]),
+        (OpAdd, bytes![OP_ADD]),
     ];
 
     for (instruction, expected) in tests {
@@ -34,11 +45,8 @@ fn test_fmt_instruction() {
 #[test]
 fn test_bytes_to_instruction() {
     let tests = vec![
-        (
-            Bytes::new(vec![OP_CONSTANT, 255, 255]),
-            vec![OpConstant(65535)],
-        ),
-        (Bytes::new(vec![OP_ADD]), vec![OpAdd]),
+        (bytes![OP_CONSTANT, 255, 255], vec![OpConstant(65535)]),
+        (bytes![OP_ADD], vec![OpAdd]),
     ];
 
     for (bytes, expected_instructions) in tests {
@@ -51,10 +59,10 @@ fn test_bytes_to_instruction() {
 fn test_bytes_disassembled_display() {
     let tests = vec![(
         vec![
-            Bytes::new(vec![OP_CONSTANT, 0, 1]),
-            Bytes::new(vec![OP_CONSTANT, 0, 2]),
-            Bytes::new(vec![OP_CONSTANT, 255, 255]),
-            Bytes::new(vec![OP_ADD]),
+            bytes![OP_CONSTANT, 0, 1],
+            bytes![OP_CONSTANT, 0, 2],
+            bytes![OP_CONSTANT, 255, 255],
+            bytes![OP_ADD],
         ],
         "0000 OpConstant 1
 0003 OpConstant 2
