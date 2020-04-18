@@ -44,12 +44,26 @@ impl Vm {
                             stack
                         })
                     }
+                    Instruction::OpAdd => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        // TODO this should be shared with eval module
+                        let evaluated = match (left, right) {
+                            (Object::Integer(x), Object::Integer(y)) => Ok(Object::Integer(x + y)),
+                            _ => unimplemented!(),
+                        }?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
                 })
             });
 
         result.and_then(|stack| last_object(&stack))
     }
 }
+
+// TODO extract stack operations into a struct.
 
 fn ith_object(stack: &Vec<Object>, i: usize) -> Result<Object, Error> {
     stack.get(i).cloned().ok_or(Error {})
@@ -58,4 +72,15 @@ fn ith_object(stack: &Vec<Object>, i: usize) -> Result<Object, Error> {
 fn last_object(stack: &Vec<Object>) -> Result<Object, Error> {
     let len = stack.len() - 1;
     ith_object(stack, len)
+}
+
+fn top_pair_object(stack: &mut Vec<Object>) -> Result<(Object, Object), Error> {
+    top_pair_object_option(stack).ok_or(Error {})
+}
+
+fn top_pair_object_option(stack: &mut Vec<Object>) -> Option<(Object, Object)> {
+    let left = stack.pop()?;
+    let right = stack.pop()?;
+
+    Some((left, right))
 }

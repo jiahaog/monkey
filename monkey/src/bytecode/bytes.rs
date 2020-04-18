@@ -1,5 +1,5 @@
-use std::{fmt, iter, ops};
 use super::*;
+use std::{fmt, iter, ops};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Bytes(pub Vec<u8>);
@@ -76,10 +76,10 @@ impl From<Instruction> for Bytes {
 
                 Bytes::new(bytes)
             }
+            OpAdd => Bytes::new(bytes),
         }
     }
 }
-
 
 impl IntoIterator for Bytes {
     type Item = Result<Instruction, Error>;
@@ -103,7 +103,8 @@ impl Iterator for BytesIntoIter {
             Byte(OP_CONSTANT) => byte_iter
                 .collect::<Result<u16, Error>>()
                 .map(|pointer| OpConstant(pointer)),
-            _ => unimplemented!(),
+            Byte(OP_ADD) => Ok(OpAdd),
+            _ => Err(Error {}),
         })
     }
 }

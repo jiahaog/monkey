@@ -8,7 +8,7 @@ fn test_integer_arithmetic() {
     let tests = vec![
         ("1", Object::Integer(1)),
         ("2", Object::Integer(2)),
-        ("1 + 2", Object::Integer(2)), // TODO
+        ("1 + 2", Object::Integer(3)),
     ];
 
     for (inp, expected) in tests {

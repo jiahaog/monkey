@@ -13,6 +13,7 @@ fn test_integer_arithmetic() {
         vec![
             bytecode::Instruction::OpConstant(0),
             bytecode::Instruction::OpConstant(1),
+            bytecode::Instruction::OpAdd,
         ],
     )];
 

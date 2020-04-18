@@ -129,6 +129,8 @@ fn eval_prefix_expr(operator: Operator, right: Object) -> EvalResult {
     }
 }
 
+// TODO move this to object module and share with vm.
+
 fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> EvalResult {
     match (operator, left, right) {
         (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {

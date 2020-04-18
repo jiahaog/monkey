@@ -38,17 +38,14 @@ impl Node for ast::Expression {
     fn compile(self, bytecode: Bytecode) -> Result<Bytecode, Error> {
         match self {
             ast::Expression::Infix {
-                operator: _operator,
+                operator,
                 left,
                 right,
             } => {
-                println!("left:{:?} right:{:?}", &left, &right);
-                let left_result = left.compile(bytecode)?;
-                let right_result = right.compile(left_result)?;
+                let result = left.compile(bytecode)?;
+                let result = right.compile(result)?;
 
-                // TODO operator
-
-                Ok(right_result)
+                Ok(result.op_operator(operator))
             }
             ast::Expression::IntegerLiteral(value) => {
                 let object = Object::Integer(value as isize);
@@ -63,7 +60,6 @@ impl Node for ast::Expression {
 // TODO implement this
 #[derive(Debug)]
 pub struct Error {}
-
 pub struct Bytecode {
     pub instructions: Vec<bytecode::Instruction>,
     pub constants: Vec<Object>,
@@ -90,17 +86,21 @@ impl Bytecode {
             constants: self.constants,
         }
     }
-}
 
-impl ops::Add<Bytecode> for Bytecode {
-    type Output = Bytecode;
-    fn add(mut self, mut other: Bytecode) -> Bytecode {
-        self.instructions.append(&mut other.instructions);
-        self.constants.append(&mut other.constants);
-
+    fn op_operator(mut self, operator: ast::Operator) -> Self {
+        self.instructions.push(operator.into());
         Self {
             instructions: self.instructions,
             constants: self.constants,
+        }
+    }
+}
+
+impl From<ast::Operator> for bytecode::Instruction {
+    fn from(operator: ast::Operator) -> Self {
+        match operator {
+            ast::Operator::Plus => bytecode::Instruction::OpAdd,
+            _ => unimplemented!(),
         }
     }
 }
