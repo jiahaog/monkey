@@ -32,7 +32,7 @@ fn test_constants(expected: Vec<Object>, received: Vec<Object>) {
     assert_eq!(expected, received);
 }
 
-fn parse(inp: &str) -> Result<Program, Vec<ParseError>> {
+fn parse(inp: &str) -> std::result::Result<Program, Vec<ParseError>> {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 

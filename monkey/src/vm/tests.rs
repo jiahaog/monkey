@@ -12,7 +12,7 @@ fn test_integer_arithmetic() {
     ];
 
     for (inp, expected) in tests {
-        let compiler::Bytecode {
+        let compiler::Output {
             instructions,
             constants,
         } = compile(inp);
@@ -24,7 +24,7 @@ fn test_integer_arithmetic() {
     }
 }
 
-fn compile(inp: &str) -> compiler::Bytecode {
+fn compile(inp: &str) -> compiler::Output {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 
