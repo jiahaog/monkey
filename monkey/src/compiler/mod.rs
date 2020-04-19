@@ -15,37 +15,29 @@ type CompileInstructions = Vec<CompileInstruction>;
 type Result<T> = std::result::Result<T, Error>;
 
 pub fn compile(program: ast::Program) -> Result<Output> {
-    let nested_instructions = program
-        .into_iter()
-        .collect::<Result<Vec<CompileInstructions>>>()?;
-
-    let bytecode = nested_instructions
-        .into_iter()
-        .flatten()
-        .collect::<Output>();
-
-    Ok(bytecode)
+    program.statements.into_iter().collect()
 }
 
-pub struct CompilerIntoIter(vec::IntoIter<ast::Statement>);
+impl iter::FromIterator<ast::Statement> for Result<Output> {
+    fn from_iter<I: IntoIterator<Item = ast::Statement>>(statements: I) -> Self {
+        let nested_instructions = statements
+            .into_iter()
+            .map(compile_statement)
+            .collect::<Result<Vec<CompileInstructions>>>()?;
 
-impl IntoIterator for ast::Program {
-    type Item = Result<CompileInstructions>;
-    type IntoIter = CompilerIntoIter;
+        let output = nested_instructions
+            .into_iter()
+            .flatten()
+            .fold(Output::new(), |bytecode, ins| bytecode.add(ins));
 
-    fn into_iter(self) -> Self::IntoIter {
-        CompilerIntoIter(self.statements.into_iter())
+        Ok(output)
     }
 }
 
-impl Iterator for CompilerIntoIter {
-    type Item = Result<CompileInstructions>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.0.next()? {
-            ast::Statement::Expression(expression) => Some(compile_expr(expression)),
-            _ => unimplemented!(),
-        }
+fn compile_statement(statement: ast::Statement) -> Result<CompileInstructions> {
+    match statement {
+        ast::Statement::Expression(expression) => compile_expr(expression),
+        _ => unimplemented!(),
     }
 }
 
@@ -86,16 +78,10 @@ impl From<ast::Operator> for CompileInstruction {
     }
 }
 
-impl iter::FromIterator<CompileInstruction> for Output {
-    fn from_iter<I: IntoIterator<Item = CompileInstruction>>(iter: I) -> Self {
-        iter.into_iter()
-            .fold(Output::new(), |bytecode, ins| bytecode.add(ins))
-    }
-}
-
 // TODO implement this
 #[derive(Debug)]
 pub struct Error {}
+
 pub struct Output {
     pub instructions: Vec<bytecode::Instruction>,
     pub constants: Vec<Object>,

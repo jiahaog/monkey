@@ -10,42 +10,40 @@ pub mod vm;
 
 use crate::eval::Error as EvalError;
 use crate::lexer::Lexer;
-use crate::object::{Env, Object};
+use crate::object::Object;
 use crate::parser::{ParseError, Parser};
 use std::fmt::{Display, Formatter};
 
-pub struct Interpreter {
-    env: Env,
-}
+pub struct Interpreter;
 
-pub struct InterpreterResult {
-    pub stdout: String,
-    pub result: std::result::Result<Object, Error>,
-}
+pub type InterpreterResult = Result<(Object, String), Error>;
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self { env: Env::new() }
+        Self
     }
 
     pub fn evaluate(&self, s: String) -> InterpreterResult {
-        // TODO cleanup output
-        InterpreterResult {
-            result: match Parser::new(Lexer::new(&s)).parse() {
-                Ok(program) => match program.evaluate(self.env.clone()) {
-                    Ok(object) => Ok(object),
-                    Err(e) => Err(Error::Eval(e)),
-                },
-                Err(e) => Err(Error::Parse(e)),
-            },
-            stdout: self.env.pop_stdout().join("\n"),
-        }
+        Parser::new(Lexer::new(&s))
+            .parse()
+            .map_err(|err| err.into())
+            .and_then(|program| {
+                program
+                    .evaluate()
+                    .map_err(|(err, stdout)| Error::Eval(err, stdout))
+            })
     }
 }
 
 pub enum Error {
     Parse(Vec<ParseError>),
-    Eval(EvalError),
+    Eval(EvalError, String),
+}
+
+impl From<Vec<ParseError>> for Error {
+    fn from(err: Vec<ParseError>) -> Self {
+        Error::Parse(err)
+    }
 }
 
 impl Display for Error {
@@ -60,7 +58,15 @@ impl Display for Error {
                     .collect::<Vec<String>>()
                     .join("\n")
             ),
-            Error::Eval(error) => write!(f, "{}", error),
+            Error::Eval(error, stdout) => {
+                let stdout = if stdout.len() > 0 {
+                    format!("{}\n", stdout)
+                } else {
+                    "".into()
+                };
+
+                write!(f, "{}{}", stdout, error)
+            }
         }
     }
 }

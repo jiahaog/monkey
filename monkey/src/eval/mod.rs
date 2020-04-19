@@ -10,19 +10,44 @@ pub use self::error::Error;
 use self::eval::{eval_exprs, Eval, EvalResult, ShortCircuit};
 use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
 use crate::object::{BuiltIn, Env, Function, Object, NULL};
+use std::iter;
 
 impl Program {
-    pub fn evaluate(self, env: Env) -> Result<Object, Error> {
-        self.eval(env).or_else(|short_circuit| match short_circuit {
-            ShortCircuit::ReturningObject(object) => Ok(object),
-            ShortCircuit::RuntimeError(err) => Err(err),
-        })
+    pub fn evaluate(self) -> Result<(Object, String), (Error, String)> {
+        self.statements.into_iter().collect()
     }
 }
 
-impl Eval for Program {
+impl iter::FromIterator<Statement> for Result<(Object, String), (Error, String)> {
+    fn from_iter<I: IntoIterator<Item = Statement>>(statements: I) -> Self {
+        let env = Env::new();
+
+        statements
+            .into_iter()
+            .fold(
+                NULL.into(),
+                |acc: Result<Object, ShortCircuit>, statement| {
+                    // Calling map will do nothing if the acc is already in a returning or error state.
+                    // There are possibly ways to make this exit immediately
+                    acc.and_then(|_| statement.eval(env.clone()))
+                },
+            )
+            .or_else(|short_circuit| match short_circuit {
+                ShortCircuit::ReturningObject(object) => Ok(object),
+                ShortCircuit::RuntimeError(err) => Err(err),
+            })
+            .map(|object| (object, env.pop_stdout().join("\n")))
+            .map_err(|err| (err, env.pop_stdout().join("\n")))
+    }
+}
+
+impl Eval for Statements {
     fn eval(self, env: Env) -> EvalResult {
-        self.statements.eval(env)
+        self.into_iter().fold(NULL.into(), |acc, statement| {
+            // Calling map will do nothing if the acc is already in a returning or error state.
+            // There are possibly ways to make this exit immediately
+            acc.and_then(|_| statement.eval(env.clone()))
+        })
     }
 }
 
@@ -38,16 +63,6 @@ impl Eval for Statement {
                 .eval(env)
                 .and_then(|object| Err(ShortCircuit::from(object))),
         }
-    }
-}
-
-impl Eval for Statements {
-    fn eval(self, env: Env) -> EvalResult {
-        self.into_iter().fold(NULL.into(), |acc, statement| {
-            // Calling map will do nothing if the acc is already in a returning or error state.
-            // There are possibly ways to make this exit immediately
-            acc.and_then(|_| statement.eval(env.clone()))
-        })
     }
 }
 
