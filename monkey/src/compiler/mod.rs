@@ -1,10 +1,13 @@
 use crate::ast;
 use crate::bytecode;
 use crate::object::Object;
+use error::Error;
 use std::{iter, vec};
 
 #[cfg(test)]
 mod tests;
+
+mod error;
 
 pub enum CompileInstruction {
     Constant(Object),
@@ -77,10 +80,6 @@ impl From<ast::Operator> for CompileInstruction {
         }
     }
 }
-
-// TODO implement this
-#[derive(Debug)]
-pub struct Error {}
 
 pub struct Output {
     pub instructions: Vec<bytecode::Instruction>,

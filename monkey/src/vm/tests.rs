@@ -1,7 +1,4 @@
 use super::*;
-use crate::compiler;
-use crate::lexer::Lexer;
-use crate::parser::Parser;
 
 #[test]
 fn test_integer_arithmetic() {
@@ -12,23 +9,9 @@ fn test_integer_arithmetic() {
     ];
 
     for (inp, expected) in tests {
-        let compiler::Output {
-            instructions,
-            constants,
-        } = compile(inp);
-
-        let vm = Vm::new(instructions, constants);
-        let object = vm.run().unwrap();
+        let vm = Vm::new();
+        let object = vm.run(inp).unwrap();
 
         assert_eq!(object, expected);
     }
-}
-
-fn compile(inp: &str) -> compiler::Output {
-    let lexer = Lexer::new(inp);
-    let parser = Parser::new(lexer);
-
-    let program = parser.parse().unwrap();
-
-    compiler::compile(program).unwrap()
 }

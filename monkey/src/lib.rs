@@ -3,7 +3,7 @@ mod bytecode;
 mod compiler;
 mod eval;
 mod lexer;
-mod object;
+pub mod object;
 mod parser;
 mod token;
 pub mod vm;
