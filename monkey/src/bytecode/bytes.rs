@@ -51,7 +51,7 @@ impl fmt::Display for Bytes {
                          instruction| {
                             (
                                 format!("{}{:04} {}\n", acc, i, instruction),
-                                i + instruction.size(),
+                                i + Definition::from(&instruction).size,
                             )
                         },
                     )
@@ -67,7 +67,9 @@ impl From<Instruction> for Bytes {
     fn from(instruction: Instruction) -> Self {
         use Instruction::*;
 
-        let mut bytes = vec![instruction.opcode()];
+        let definition: Definition = (&instruction).into();
+
+        let mut bytes = vec![definition.code];
 
         match instruction {
             OpConstant(pointer) => {

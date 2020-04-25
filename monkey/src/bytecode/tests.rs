@@ -1,5 +1,6 @@
 use super::Instruction::*;
 
+use super::opcode::*;
 use super::*;
 
 macro_rules! bytes {
