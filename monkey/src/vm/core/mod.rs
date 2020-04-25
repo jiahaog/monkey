@@ -1,9 +1,9 @@
 use crate::bytecode::Instruction;
 use crate::compiler;
 use crate::object::Object;
-use error::Error;
 
-use super::error;
+pub use error::Error;
+mod error;
 
 const STACK_SIZE: usize = 2048;
 

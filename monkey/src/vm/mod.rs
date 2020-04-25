@@ -2,7 +2,8 @@ use crate::compiler;
 use crate::lexer::Lexer;
 use crate::object::Object;
 use crate::parser::Parser;
-use error::Error;
+
+pub use error::Error;
 
 #[cfg(test)]
 mod tests;
@@ -28,6 +29,7 @@ impl Vm {
 
         let compiled = compiler::compile(program).unwrap();
 
-        self.vm.run(compiled)
+        let object = self.vm.run(compiled)?;
+        Ok(object)
     }
 }
