@@ -10,40 +10,48 @@ pub mod vm;
 
 use crate::eval::Error as EvalError;
 use crate::lexer::Lexer;
-use crate::object::Object;
+use crate::object::{Env, Object};
 use crate::parser::{ParseError, Parser};
 use std::fmt::{Display, Formatter};
 
-pub struct Interpreter;
+pub struct Interpreter {
+    env: Env,
+}
 
-pub type InterpreterResult = Result<(Object, String), Error>;
+pub struct InterpreterResult {
+    pub stdout: String,
+    pub result: std::result::Result<Object, Error>,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self
+        Self { env: Env::new() }
     }
 
-    pub fn evaluate(&self, s: String) -> InterpreterResult {
-        Parser::new(Lexer::new(&s))
-            .parse()
-            .map_err(|err| err.into())
-            .and_then(|program| {
-                program
-                    .evaluate()
-                    .map_err(|(err, stdout)| Error::Eval(err, stdout))
-            })
+    pub fn evaluate(&mut self, s: String) -> InterpreterResult {
+        // TODO cleanup output
+        let result = match Parser::new(Lexer::new(&s)).parse() {
+            Ok(program) => {
+                let (env, eval_result) = program.evaluate(self.env.clone());
+
+                // Update the existing env to preserve state.
+                self.env = env;
+
+                eval_result.map_err(|err| Error::Eval(err))
+            }
+
+            Err(e) => Err(Error::Parse(e)),
+        };
+        InterpreterResult {
+            result,
+            stdout: self.env.pop_stdout().join("\n"),
+        }
     }
 }
 
 pub enum Error {
     Parse(Vec<ParseError>),
-    Eval(EvalError, String),
-}
-
-impl From<Vec<ParseError>> for Error {
-    fn from(err: Vec<ParseError>) -> Self {
-        Error::Parse(err)
-    }
+    Eval(EvalError),
 }
 
 impl Display for Error {
@@ -58,15 +66,7 @@ impl Display for Error {
                     .collect::<Vec<String>>()
                     .join("\n")
             ),
-            Error::Eval(error, stdout) => {
-                let stdout = if stdout.len() > 0 {
-                    format!("{}\n", stdout)
-                } else {
-                    "".into()
-                };
-
-                write!(f, "{}{}", stdout, error)
-            }
+            Error::Eval(error) => write!(f, "{}", error),
         }
     }
 }

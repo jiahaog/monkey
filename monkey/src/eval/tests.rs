@@ -444,11 +444,8 @@ fn test_eval_builtin_expr() {
 #[test]
 fn test_eval_builtin_print() {
     let cases = vec![
-        ("print(1)", Ok((Object::Null, "1".to_string()))),
-        (
-            "print(1, 2); print(3)",
-            Ok((Object::Null, "1 2\n3".to_string())),
-        ),
+        ("print(1)", Ok(Object::Null), vec!["1"]),
+        ("print(1, 2); print(3)", Ok(Object::Null), vec!["1 2", "3"]),
         (
             "
 let test = fn(x) {
@@ -459,7 +456,8 @@ let test = fn(x) {
 
 test([])
         ",
-            Ok((Object::Integer(0), "1 2\n3".to_string())),
+            Ok(Object::Integer(0)),
+            vec!["1 2", "3"],
         ),
         (
             "
@@ -470,26 +468,26 @@ let test = fn(x) {
 
 test(1)
         ",
-            Err((
-                Error::TypeError {
-                    message: "object of type 'int' has no len()".to_string(),
-                },
-                "3".to_string(),
-            )),
+            Err(Error::TypeError {
+                message: "object of type 'int' has no len()".to_string(),
+            }),
+            vec!["3"],
         ),
     ];
 
-    for (inp, expected_result) in cases {
+    for (inp, expected_result, expected_stdout) in cases {
         let lexer = Lexer::new(inp);
         let parser = Parser::new(lexer);
 
         let program = parser.parse().expect("No parse errors");
 
-        let result = program.evaluate();
+        let env = Env::new();
+
+        let (env, result) = program.evaluate(env.clone());
         assert_eq!(expected_result, result);
+        assert_eq!(expected_stdout, env.pop_stdout());
     }
 }
-
 
 #[test]
 fn test_eval_list_iter_expr() {
@@ -619,8 +617,8 @@ fn eval(inp: &str) -> Result<Object, Error> {
 
     let program = parser.parse().expect("No parse errors");
 
-    program
-        .evaluate()
-        .map(|(object, _)| object)
-        .map_err(|(err, _)| err)
+    let env = Env::new();
+
+    let (_, result) = program.evaluate(env);
+    result
 }

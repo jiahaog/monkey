@@ -10,19 +10,11 @@ pub use self::error::Error;
 use self::eval::{eval_exprs, Eval, EvalResult, ShortCircuit};
 use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
 use crate::object::{BuiltIn, Env, Function, Object, NULL};
-use std::iter;
 
 impl Program {
-    pub fn evaluate(self) -> Result<(Object, String), (Error, String)> {
-        self.statements.into_iter().collect()
-    }
-}
-
-impl iter::FromIterator<Statement> for Result<(Object, String), (Error, String)> {
-    fn from_iter<I: IntoIterator<Item = Statement>>(statements: I) -> Self {
-        let env = Env::new();
-
-        statements
+    pub fn evaluate(self, env: Env) -> (Env, Result<Object, Error>) {
+        let result = self
+            .statements
             .into_iter()
             .fold(
                 NULL.into(),
@@ -35,9 +27,9 @@ impl iter::FromIterator<Statement> for Result<(Object, String), (Error, String)>
             .or_else(|short_circuit| match short_circuit {
                 ShortCircuit::ReturningObject(object) => Ok(object),
                 ShortCircuit::RuntimeError(err) => Err(err),
-            })
-            .map(|object| (object, env.pop_stdout().join("\n")))
-            .map_err(|err| (err, env.pop_stdout().join("\n")))
+            });
+
+        (env, result)
     }
 }
 

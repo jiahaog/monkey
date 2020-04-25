@@ -1,6 +1,6 @@
 extern crate monkey;
 
-use monkey::Interpreter;
+use monkey::{Interpreter, InterpreterResult};
 use std::io;
 use std::io::{BufRead, Write};
 
@@ -50,17 +50,13 @@ fn handle_input<W>(
 where
     W: Write,
 {
-    let out_str = match interpreter.evaluate(s) {
-        Ok((object, stdout)) => {
-            let stdout = if stdout.len() > 0 {
-                format!("{}\n", stdout)
-            } else {
-                "".into()
-            };
-            format!("{}{}", stdout, object)
-        }
-        Err(err) => format!("{}\n", err),
+    let InterpreterResult { stdout, result } = interpreter.evaluate(s);
+    if stdout.len() > 0 {
+        output.write(format!("{}\n", stdout).as_bytes())?;
     };
 
-    output.write(out_str.as_bytes())
+    match result {
+        Ok(object) => output.write(format!("{}\n", object).as_bytes()),
+        Err(e) => output.write(format!("{}\n", e).as_bytes()),
+    }
 }
