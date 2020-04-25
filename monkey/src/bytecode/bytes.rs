@@ -79,6 +79,7 @@ impl From<Instruction> for Bytes {
                 Bytes::new(bytes)
             }
             OpAdd => Bytes::new(bytes),
+            OpPop => Bytes::new(bytes),
         }
     }
 }

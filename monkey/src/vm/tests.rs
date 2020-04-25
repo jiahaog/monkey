@@ -9,9 +9,9 @@ fn test_integer_arithmetic() {
     ];
 
     for (inp, expected) in tests {
-        let vm = Vm::new();
-        let object = vm.run(inp).unwrap();
+        let mut vm = Vm::new();
+        let _ = vm.run(Vec::new(), inp).unwrap();
 
-        assert_eq!(object, expected);
+        assert_eq!(vm.last_popped().unwrap(), &expected);
     }
 }

@@ -4,6 +4,7 @@ pub type OpCode = u8;
 
 pub const OP_CONSTANT: OpCode = 1;
 pub const OP_ADD: OpCode = 2;
+pub const OP_POP: OpCode = 3;
 
 pub struct Definition {
     pub code: OpCode,
@@ -24,6 +25,11 @@ impl From<&Instruction> for Definition {
             OpAdd => Self {
                 name: "OpAdd",
                 code: OP_ADD,
+                size: 1,
+            },
+            OpPop => Self {
+                name: "OpPop",
+                code: OP_POP,
                 size: 1,
             },
         }

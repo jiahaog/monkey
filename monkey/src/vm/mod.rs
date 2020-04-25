@@ -3,6 +3,7 @@ use crate::lexer::Lexer;
 use crate::object::Object;
 use crate::parser::Parser;
 
+pub use self::core::Stack;
 pub use error::Error;
 
 #[cfg(test)]
@@ -21,7 +22,8 @@ impl Vm {
             vm: core::Vm::new(),
         }
     }
-    pub fn run(&self, inp: &str) -> Result<Object, Error> {
+
+    pub fn run(&mut self, stack: Stack, inp: &str) -> Result<Stack, Error> {
         let lexer = Lexer::new(inp);
         let parser = Parser::new(lexer);
 
@@ -29,7 +31,10 @@ impl Vm {
 
         let compiled = compiler::compile(program)?;
 
-        let object = self.vm.run(compiled)?;
-        Ok(object)
+        self.vm.run(stack, compiled).map_err(|e| e.into())
+    }
+
+    pub fn last_popped(&self) -> Option<&Object> {
+        self.vm.last_popped.as_ref()
     }
 }

@@ -7,23 +7,30 @@ mod error;
 
 const STACK_SIZE: usize = 2048;
 
-pub struct Vm {}
+pub struct Vm {
+    // For testing.
+    // TODO: Put this into the Stack object.
+    pub last_popped: Option<Object>,
+}
+
+// TODO: Make this a proper struct.
+pub type Stack = Vec<Object>;
 
 impl Vm {
     pub fn new() -> Self {
-        Self {}
+        Self { last_popped: None }
     }
 
-    pub fn run(&self, compiled: compiler::Output) -> Result<Object, Error> {
+    pub fn run(&mut self, stack: Stack, compiled: compiler::Output) -> Result<Stack, Error> {
         let compiler::Output {
             constants,
             instructions,
         } = compiled;
 
-        let result = instructions
+        instructions
             .into_iter()
             // TOOD make the stack a field.
-            .fold(Ok(Vec::new()), |result, instruction| {
+            .fold(Ok(stack), |result, instruction| {
                 // todo
                 result.and_then(|mut stack| match instruction {
                     Instruction::OpConstant(i) => {
@@ -44,10 +51,14 @@ impl Vm {
                         stack.push(evaluated);
                         Ok(stack)
                     }
-                })
-            });
+                    Instruction::OpPop => {
+                        let top = last_object(&stack)?;
 
-        result.and_then(|stack| last_object(&stack))
+                        self.last_popped = Some(top);
+                        Ok(stack)
+                    }
+                })
+            })
     }
 }
 
@@ -58,8 +69,12 @@ fn ith_object(stack: &Vec<Object>, i: usize) -> Result<Object, Error> {
 }
 
 fn last_object(stack: &Vec<Object>) -> Result<Object, Error> {
-    let len = stack.len() - 1;
-    ith_object(stack, len)
+    if stack.len() == 0 {
+        Err(Error::StackOutOfRange)
+    } else {
+        let len = stack.len() - 1;
+        ith_object(stack, len)
+    }
 }
 
 fn top_pair_object(stack: &mut Vec<Object>) -> Result<(Object, Object), Error> {

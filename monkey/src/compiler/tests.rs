@@ -3,7 +3,7 @@ use crate::ast::Program;
 use crate::bytecode;
 use crate::lexer::Lexer;
 use crate::object::Object;
-use crate::parser::{Errors, Parser};
+use crate::parser;
 
 #[test]
 fn test_integer_arithmetic() {
@@ -14,6 +14,7 @@ fn test_integer_arithmetic() {
             bytecode::Instruction::OpConstant(0),
             bytecode::Instruction::OpConstant(1),
             bytecode::Instruction::OpAdd,
+            bytecode::Instruction::OpPop,
         ],
     )];
 
@@ -32,9 +33,9 @@ fn test_constants(expected: Vec<Object>, received: Vec<Object>) {
     assert_eq!(expected, received);
 }
 
-fn parse(inp: &str) -> std::result::Result<Program, Errors> {
+fn parse(inp: &str) -> std::result::Result<Program, parser::Errors> {
     let lexer = Lexer::new(inp);
-    let parser = Parser::new(lexer);
+    let parser = parser::Parser::new(lexer);
 
     parser.parse()
 }

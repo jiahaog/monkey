@@ -12,6 +12,7 @@ mod error;
 pub enum CompileInstruction {
     Constant(Object),
     Add,
+    Pop,
 }
 
 type CompileInstructions = Vec<CompileInstruction>;
@@ -39,7 +40,10 @@ impl iter::FromIterator<ast::Statement> for Result<Output> {
 
 fn compile_statement(statement: ast::Statement) -> Result<CompileInstructions> {
     match statement {
-        ast::Statement::Expression(expression) => compile_expr(expression),
+        ast::Statement::Expression(expression) => compile_expr(expression).map(|mut ins| {
+            ins.push(CompileInstruction::Pop);
+            ins
+        }),
         _ => unimplemented!(),
     }
 }
@@ -111,6 +115,13 @@ impl Output {
             }
             CompileInstruction::Add => {
                 self.instructions.push(bytecode::Instruction::OpAdd);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::Pop => {
+                self.instructions.push(bytecode::Instruction::OpPop);
                 Self {
                     instructions: self.instructions,
                     constants: self.constants,

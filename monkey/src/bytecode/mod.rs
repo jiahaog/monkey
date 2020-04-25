@@ -20,6 +20,7 @@ pub enum Instruction {
     // need to play with bytes and indexing when converting from this to bytes.
     OpConstant(u16),
     OpAdd,
+    OpPop,
 }
 
 impl fmt::Display for Instruction {
@@ -29,6 +30,7 @@ impl fmt::Display for Instruction {
         match self {
             OpConstant(pointer) => write!(f, "{} {}", definition.name, pointer),
             OpAdd => write!(f, "{}", definition.name),
+            OpPop => write!(f, "{}", definition.name),
         }
     }
 }
