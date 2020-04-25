@@ -25,9 +25,9 @@ impl Vm {
         let lexer = Lexer::new(inp);
         let parser = Parser::new(lexer);
 
-        let program = parser.parse().unwrap();
+        let program = parser.parse()?;
 
-        let compiled = compiler::compile(program).unwrap();
+        let compiled = compiler::compile(program)?;
 
         let object = self.vm.run(compiled)?;
         Ok(object)

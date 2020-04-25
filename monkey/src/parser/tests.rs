@@ -621,5 +621,5 @@ fn test_parser_error(expected_err: Vec<ParseError>, inp: &str) {
     let parser = Parser::new(lexer);
 
     let err = parser.parse().expect_err("Expect parse errors");
-    assert_eq!(expected_err, err);
+    assert_eq!(expected_err, err.errors);
 }

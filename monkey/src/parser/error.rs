@@ -2,6 +2,25 @@ use self::ParseErrorExpected::*;
 use crate::token::Token;
 use std::fmt;
 
+#[derive(Debug)]
+pub struct ParseErrors {
+    pub errors: Vec<ParseError>,
+}
+
+impl std::error::Error for ParseErrors {}
+
+impl fmt::Display for ParseErrors {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Vec<ParseError>> for ParseErrors {
+    fn from(errs: Vec<ParseError>) -> Self {
+        Self { errors: errs }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ParseErrorExpected {
     Identifier,
@@ -22,6 +41,8 @@ pub struct ParseError {
     pub expected: ParseErrorExpected,
     pub received: Option<Token>,
 }
+
+impl std::error::Error for ParseError {}
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

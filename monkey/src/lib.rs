@@ -11,7 +11,7 @@ pub mod vm;
 use crate::eval::Error as EvalError;
 use crate::lexer::Lexer;
 use crate::object::{Env, Object};
-use crate::parser::{ParseError, Parser};
+use crate::parser::{ParseErrors, Parser};
 use std::fmt::{Display, Formatter};
 
 pub struct Interpreter {
@@ -50,18 +50,18 @@ impl Interpreter {
 }
 
 pub enum Error {
-    Parse(Vec<ParseError>),
+    Parse(ParseErrors),
     Eval(EvalError),
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Error::Parse(errors) => write!(
+            Error::Parse(err) => write!(
                 f,
                 "{}",
-                errors
-                    .into_iter()
+                err.errors
+                    .iter()
                     .map(|x| format!("{}", x))
                     .collect::<Vec<String>>()
                     .join("\n")

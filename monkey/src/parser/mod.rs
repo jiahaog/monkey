@@ -8,8 +8,8 @@ mod precedence;
 #[cfg(test)]
 mod tests;
 
-pub use self::error::ParseError;
 use self::error::ParseErrorExpected;
+pub use self::error::{ParseError, ParseErrors};
 use self::precedence::Precedence;
 use crate::ast::{Program, Statement, Statements};
 use crate::lexer::Lexer;
@@ -27,13 +27,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(self) -> Result<Program, Vec<ParseError>> {
+    pub fn parse(self) -> Result<Program, ParseErrors> {
         let (oks, fails): (Vec<_>, Vec<_>) = self.partition(Result::is_ok);
         let values = oks.into_iter().map(Result::unwrap).collect();
-        let errors: Vec<_> = fails.into_iter().map(Result::unwrap_err).collect();
+        let errors: Vec<ParseError> = fails.into_iter().map(Result::unwrap_err).collect();
 
         if errors.len() > 0 {
-            Err(errors)
+            Err(errors.into())
         } else {
             Ok(Program { statements: values })
         }

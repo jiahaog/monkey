@@ -1,7 +1,7 @@
 use crate::ast;
 use crate::bytecode;
 use crate::object::Object;
-use error::Error;
+pub use error::Error;
 use std::{iter, vec};
 
 #[cfg(test)]

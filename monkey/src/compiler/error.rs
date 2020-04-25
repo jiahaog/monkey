@@ -1,7 +1,8 @@
 use std::fmt;
-// TODO
 #[derive(Debug)]
-pub enum Error {}
+pub enum Error {
+    // TODO: Add variants.
+}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
