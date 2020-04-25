@@ -1,5 +1,5 @@
 use crate::compiler;
-use crate::parser::ParseErrors;
+use crate::parser::Errors;
 use crate::vm::core;
 use std::fmt;
 
@@ -7,7 +7,7 @@ use std::fmt;
 pub enum Error {
     Internal(core::Error),
     Compile(compiler::Error),
-    Parse(ParseErrors),
+    Parse(Errors),
 }
 
 impl fmt::Display for Error {
@@ -26,8 +26,8 @@ impl std::error::Error for Error {
     }
 }
 
-impl From<ParseErrors> for Error {
-    fn from(err: ParseErrors) -> Self {
+impl From<Errors> for Error {
+    fn from(err: Errors) -> Self {
         Error::Parse(err)
     }
 }

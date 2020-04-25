@@ -11,7 +11,7 @@ pub mod vm;
 use crate::eval::Error as EvalError;
 use crate::lexer::Lexer;
 use crate::object::{Env, Object};
-use crate::parser::{ParseErrors, Parser};
+use crate::parser::{Errors, Parser};
 use std::fmt::{Display, Formatter};
 
 pub struct Interpreter {
@@ -50,7 +50,7 @@ impl Interpreter {
 }
 
 pub enum Error {
-    Parse(ParseErrors),
+    Parse(Errors),
     Eval(EvalError),
 }
 

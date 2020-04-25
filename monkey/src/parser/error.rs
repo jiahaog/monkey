@@ -1,28 +1,28 @@
-use self::ParseErrorExpected::*;
+use self::ErrorExpected::*;
 use crate::token::Token;
 use std::fmt;
 
 #[derive(Debug)]
-pub struct ParseErrors {
-    pub errors: Vec<ParseError>,
+pub struct Errors {
+    pub errors: Vec<Error>,
 }
 
-impl std::error::Error for ParseErrors {}
+impl std::error::Error for Errors {}
 
-impl fmt::Display for ParseErrors {
+impl fmt::Display for Errors {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl From<Vec<ParseError>> for ParseErrors {
-    fn from(errs: Vec<ParseError>) -> Self {
+impl From<Vec<Error>> for Errors {
+    fn from(errs: Vec<Error>) -> Self {
         Self { errors: errs }
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ParseErrorExpected {
+pub enum ErrorExpected {
     Identifier,
     Expression,
     Assignment,
@@ -37,14 +37,14 @@ pub enum ParseErrorExpected {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ParseError {
-    pub expected: ParseErrorExpected,
+pub struct Error {
+    pub expected: ErrorExpected,
     pub received: Option<Token>,
 }
 
-impl std::error::Error for ParseError {}
+impl std::error::Error for Error {}
 
-impl fmt::Display for ParseError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let expected = match self.expected {
             Identifier => "identifier",
@@ -64,10 +64,6 @@ impl fmt::Display for ParseError {
             Some(token) => format!("'{}'", token),
             None => String::from("nothing"),
         };
-        write!(
-            f,
-            "ParseError: Expected {} but received {}",
-            expected, received
-        )
+        write!(f, "Error: Expected {} but received {}", expected, received)
     }
 }

@@ -1,15 +1,15 @@
 use crate::ast::{Expression, Operator};
 use crate::parser::Parser;
 use crate::parser::Precedence;
-use crate::parser::{ParseError, ParseErrorExpected};
+use crate::parser::{Error, ErrorExpected};
 use crate::token::Token;
 
 impl<'a> Parser<'a> {
-    pub fn next_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
+    pub fn next_expression(&mut self, precedence: Precedence) -> Result<Expression, Error> {
         self.lexer
             .next()
-            .ok_or(ParseError {
-                expected: ParseErrorExpected::Expression,
+            .ok_or(Error {
+                expected: ErrorExpected::Expression,
                 received: None,
             })
             .and_then(|token| self.next_prefix_expression(token))
@@ -20,7 +20,7 @@ impl<'a> Parser<'a> {
         &mut self,
         precedence: Precedence,
         prev: Expression,
-    ) -> Result<Expression, ParseError> {
+    ) -> Result<Expression, Error> {
         match self.lexer.peek() {
             Some(Token::Semicolon) => Ok(prev),
             Some(token) if precedence < token.into() => {
@@ -36,7 +36,7 @@ impl<'a> Parser<'a> {
         &mut self,
         prev: Expression,
         token: Token,
-    ) -> Result<Expression, ParseError> {
+    ) -> Result<Expression, Error> {
         let precedence = (&token).into();
         match token {
             Token::Plus => self.parse_infix_expr(precedence, prev, Operator::Plus),
@@ -49,22 +49,22 @@ impl<'a> Parser<'a> {
             Token::GreaterThan => self.parse_infix_expr(precedence, prev, Operator::GreaterThan),
             Token::LParen => self.parse_call_expression(prev),
             Token::LBracket => self.parse_index_expression(prev),
-            token => Err(ParseError {
-                expected: ParseErrorExpected::Expression,
+            token => Err(Error {
+                expected: ErrorExpected::Expression,
                 received: Some(token),
             }),
         }
     }
 
-    fn parse_index_expression(&mut self, prev: Expression) -> Result<Expression, ParseError> {
+    fn parse_index_expression(&mut self, prev: Expression) -> Result<Expression, Error> {
         self.next_expression(Precedence::Lowest)
             // If no next expression can be successfully parsed, replace the error message.
             .map_err(
-                |ParseError {
+                |Error {
                      expected: _,
                      received,
-                 }| ParseError {
-                    expected: ParseErrorExpected::SingleIndex,
+                 }| Error {
+                    expected: ErrorExpected::SingleIndex,
                     received: received,
                 },
             )
@@ -77,8 +77,8 @@ impl<'a> Parser<'a> {
                     self.lexer.next();
                     Ok(expr)
                 }
-                _ => Err(ParseError {
-                    expected: ParseErrorExpected::SingleIndex,
+                _ => Err(Error {
+                    expected: ErrorExpected::SingleIndex,
                     received: self.lexer.next(),
                 }),
             })
@@ -89,7 +89,7 @@ impl<'a> Parser<'a> {
         precedence: Precedence,
         left: Expression,
         operator: Operator,
-    ) -> Result<Expression, ParseError> {
+    ) -> Result<Expression, Error> {
         self.next_expression(precedence)
             .map(|next_expr| Expression::Infix {
                 operator,
@@ -98,15 +98,15 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn next_prefix_expression(&mut self, token: Token) -> Result<Expression, ParseError> {
+    fn next_prefix_expression(&mut self, token: Token) -> Result<Expression, Error> {
         match token {
             Token::Identifier(name) => Ok(Expression::Identifier(name)),
             Token::Int(value) => Ok(Expression::IntegerLiteral(value)),
             Token::Str(value) => Ok(Expression::StringLiteral(value)),
             Token::Bang => self.parse_prefix_expr(Operator::Not),
             Token::Minus => self.parse_prefix_expr(Operator::Minus),
-            Token::Semicolon => Err(ParseError {
-                expected: ParseErrorExpected::PrefixTokenOrExpression,
+            Token::Semicolon => Err(Error {
+                expected: ErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Semicolon),
             }),
             Token::True => Ok(Expression::Boolean(true)),
@@ -115,18 +115,18 @@ impl<'a> Parser<'a> {
             Token::LBracket => self.parse_list_expression(),
             Token::If => self.parse_if_expression(),
             Token::Function => self.parse_function_expression(),
-            Token::Return => Err(ParseError {
-                expected: ParseErrorExpected::PrefixTokenOrExpression,
+            Token::Return => Err(Error {
+                expected: ErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Return),
             }),
-            token => Err(ParseError {
-                expected: ParseErrorExpected::PrefixTokenOrExpression,
+            token => Err(Error {
+                expected: ErrorExpected::PrefixTokenOrExpression,
                 received: Some(token),
             }),
         }
     }
 
-    fn parse_prefix_expr(&mut self, operator: Operator) -> Result<Expression, ParseError> {
+    fn parse_prefix_expr(&mut self, operator: Operator) -> Result<Expression, Error> {
         self.next_expression(Precedence::Prefix)
             .map(|next_exp| Expression::Prefix {
                 operator,
@@ -134,15 +134,15 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
+    fn parse_grouped_expression(&mut self) -> Result<Expression, Error> {
         self.next_expression(Precedence::Lowest)
             .and_then(|expr| match self.lexer.peek() {
                 Some(Token::RParen) => {
                     self.lexer.next();
                     Ok(expr)
                 }
-                _ => Err(ParseError {
-                    expected: ParseErrorExpected::ClosingParenthesis,
+                _ => Err(Error {
+                    expected: ErrorExpected::ClosingParenthesis,
                     received: self.lexer.next(),
                 }),
             })

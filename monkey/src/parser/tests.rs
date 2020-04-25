@@ -1,6 +1,6 @@
 use crate::ast::{Expression, Function, Operator, Statement, Statements};
 use crate::lexer::Lexer;
-use crate::parser::{ParseError, ParseErrorExpected, Parser};
+use crate::parser::{Error, ErrorExpected, Parser};
 use crate::token::Token;
 
 #[test]
@@ -35,8 +35,8 @@ fn test_return_statements() {
 fn test_let_wrong_identifier() {
     let inp = "let 1";
     test_parser_error(
-        vec![ParseError {
-            expected: ParseErrorExpected::Identifier,
+        vec![Error {
+            expected: ErrorExpected::Identifier,
             received: Some(Token::Int(1)),
         }],
         inp,
@@ -47,8 +47,8 @@ fn test_let_wrong_identifier() {
 fn test_let_no_identifier() {
     let inp = "let";
     test_parser_error(
-        vec![ParseError {
-            expected: ParseErrorExpected::Identifier,
+        vec![Error {
+            expected: ErrorExpected::Identifier,
             received: None,
         }],
         inp,
@@ -59,8 +59,8 @@ fn test_let_no_identifier() {
 fn test_let_missing_assign() {
     let inp = "let x 5;";
     test_parser_error(
-        vec![ParseError {
-            expected: ParseErrorExpected::Assignment,
+        vec![Error {
+            expected: ErrorExpected::Assignment,
             received: Some(Token::Int(5)),
         }],
         inp,
@@ -71,8 +71,8 @@ fn test_let_missing_assign() {
 fn test_let_missing_expression() {
     let inp = "let x = ;";
     test_parser_error(
-        vec![ParseError {
-            expected: ParseErrorExpected::PrefixTokenOrExpression,
+        vec![Error {
+            expected: ErrorExpected::PrefixTokenOrExpression,
             received: Some(Token::Semicolon),
         }],
         inp,
@@ -86,12 +86,12 @@ fn test_let_multiple_errors() {
     let foobar = 838383;";
     test_parser_error(
         vec![
-            ParseError {
-                expected: ParseErrorExpected::Identifier,
+            Error {
+                expected: ErrorExpected::Identifier,
                 received: Some(Token::Assign),
             },
-            ParseError {
-                expected: ParseErrorExpected::Assignment,
+            Error {
+                expected: ErrorExpected::Assignment,
                 received: Some(Token::Int(10)),
             },
         ],
@@ -238,15 +238,15 @@ fn test_list_index_expression_error() {
     let cases = vec![
         (
             "[1][];",
-            vec![ParseError {
-                expected: ParseErrorExpected::SingleIndex,
+            vec![Error {
+                expected: ErrorExpected::SingleIndex,
                 received: Some(Token::RBracket),
             }],
         ),
         (
             "[1][1,2];",
-            vec![ParseError {
-                expected: ParseErrorExpected::SingleIndex,
+            vec![Error {
+                expected: ErrorExpected::SingleIndex,
                 received: Some(Token::Comma),
             }],
         ),
@@ -296,36 +296,36 @@ fn test_prefix_expressions_error() {
     let cases = vec![
         (
             "-;",
-            vec![ParseError {
-                expected: ParseErrorExpected::PrefixTokenOrExpression,
+            vec![Error {
+                expected: ErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Semicolon),
             }],
         ),
         (
             "-",
-            vec![ParseError {
-                expected: ParseErrorExpected::Expression,
+            vec![Error {
+                expected: ErrorExpected::Expression,
                 received: None,
             }],
         ),
         (
             "let a = return 1",
-            vec![ParseError {
-                expected: ParseErrorExpected::PrefixTokenOrExpression,
+            vec![Error {
+                expected: ErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Return),
             }],
         ),
         (
             "123let",
-            vec![ParseError {
-                expected: ParseErrorExpected::PrefixTokenOrExpression,
+            vec![Error {
+                expected: ErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Illegal("123let".to_string())),
             }],
         ),
         (
             "++",
-            vec![ParseError {
-                expected: ParseErrorExpected::PrefixTokenOrExpression,
+            vec![Error {
+                expected: ErrorExpected::PrefixTokenOrExpression,
                 received: Some(Token::Plus),
             }],
         ),
@@ -616,7 +616,7 @@ fn test_parser_success_with_str(expected: &str, inp: &str) {
     assert_eq!(expected, received);
 }
 
-fn test_parser_error(expected_err: Vec<ParseError>, inp: &str) {
+fn test_parser_error(expected_err: Vec<Error>, inp: &str) {
     let lexer = Lexer::new(inp);
     let parser = Parser::new(lexer);
 

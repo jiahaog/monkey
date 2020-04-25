@@ -8,8 +8,8 @@ mod precedence;
 #[cfg(test)]
 mod tests;
 
-use self::error::ParseErrorExpected;
-pub use self::error::{ParseError, ParseErrors};
+use self::error::ErrorExpected;
+pub use self::error::{Error, Errors};
 use self::precedence::Precedence;
 use crate::ast::{Program, Statement, Statements};
 use crate::lexer::Lexer;
@@ -27,10 +27,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(self) -> Result<Program, ParseErrors> {
+    pub fn parse(self) -> Result<Program, Errors> {
         let (oks, fails): (Vec<_>, Vec<_>) = self.partition(Result::is_ok);
         let values = oks.into_iter().map(Result::unwrap).collect();
-        let errors: Vec<ParseError> = fails.into_iter().map(Result::unwrap_err).collect();
+        let errors: Vec<Error> = fails.into_iter().map(Result::unwrap_err).collect();
 
         if errors.len() > 0 {
             Err(errors.into())
@@ -39,7 +39,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn next_statement(&mut self) -> Option<Result<Statement, ParseError>> {
+    fn next_statement(&mut self) -> Option<Result<Statement, Error>> {
         (match self.lexer.peek() {
             None => None,
             Some(Token::Let) => {
@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn next_let_statement(&mut self) -> Result<Statement, ParseError> {
+    fn next_let_statement(&mut self) -> Result<Statement, Error> {
         self.next_let_statement_identifier()
             .and_then(|name| self.next_let_statement_assign().map(|_| name))
             .and_then(|name| {
@@ -76,39 +76,39 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn next_let_statement_identifier(&mut self) -> Result<String, ParseError> {
+    fn next_let_statement_identifier(&mut self) -> Result<String, Error> {
         self.lexer
             .next()
-            .ok_or(ParseError {
-                expected: ParseErrorExpected::Identifier,
+            .ok_or(Error {
+                expected: ErrorExpected::Identifier,
                 received: None,
             })
             .and_then(|token| match token {
                 Token::Identifier(name) => Ok(name),
-                unexpected => Err(ParseError {
-                    expected: ParseErrorExpected::Identifier,
+                unexpected => Err(Error {
+                    expected: ErrorExpected::Identifier,
                     received: Some(unexpected),
                 }),
             })
     }
 
-    fn next_let_statement_assign(&mut self) -> Result<Token, ParseError> {
+    fn next_let_statement_assign(&mut self) -> Result<Token, Error> {
         self.lexer
             .next()
-            .ok_or(ParseError {
-                expected: ParseErrorExpected::Assignment,
+            .ok_or(Error {
+                expected: ErrorExpected::Assignment,
                 received: None,
             })
             .and_then(|token| match token {
                 Token::Assign => Ok(token),
-                unexpected => Err(ParseError {
-                    expected: ParseErrorExpected::Assignment,
+                unexpected => Err(Error {
+                    expected: ErrorExpected::Assignment,
                     received: Some(unexpected),
                 }),
             })
     }
 
-    fn next_return_statement(&mut self) -> Result<Statement, ParseError> {
+    fn next_return_statement(&mut self) -> Result<Statement, Error> {
         let result = self
             .next_expression(Precedence::Lowest)
             .map(|x| Statement::Return(x));
@@ -120,7 +120,7 @@ impl<'a> Parser<'a> {
         result
     }
 
-    fn next_expression_statement(&mut self) -> Result<Statement, ParseError> {
+    fn next_expression_statement(&mut self) -> Result<Statement, Error> {
         let result = self
             .next_expression(Precedence::Lowest)
             .map(|x| Statement::Expression(x));
@@ -132,7 +132,7 @@ impl<'a> Parser<'a> {
         result
     }
 
-    fn parse_block_statements(&mut self, mut prev: Statements) -> Result<Statements, ParseError> {
+    fn parse_block_statements(&mut self, mut prev: Statements) -> Result<Statements, Error> {
         match self.lexer.peek() {
             None => Ok(prev),
             Some(Token::RBrace) => {
@@ -163,7 +163,7 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Iterator for Parser<'a> {
-    type Item = Result<Statement, ParseError>;
+    type Item = Result<Statement, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next_statement()

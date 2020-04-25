@@ -1,22 +1,19 @@
 use crate::ast::{CallFunctionExpression, Expression, Function};
 use crate::parser::Parser;
 use crate::parser::Precedence;
-use crate::parser::{ParseError, ParseErrorExpected};
+use crate::parser::{Error, ErrorExpected};
 use crate::token::Token;
 
 impl<'a> Parser<'a> {
-    pub fn parse_call_expression(
-        &mut self,
-        function: Expression,
-    ) -> Result<Expression, ParseError> {
+    pub fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, Error> {
         self.chomp_call_args(Vec::new())
             .and_then(|expr| match self.lexer.peek() {
                 Some(Token::RParen) => {
                     self.lexer.next();
                     Ok(expr)
                 }
-                _ => Err(ParseError {
-                    expected: ParseErrorExpected::ClosingParenthesis,
+                _ => Err(Error {
+                    expected: ErrorExpected::ClosingParenthesis,
                     received: self.lexer.next(),
                 }),
             })
@@ -35,10 +32,7 @@ impl<'a> Parser<'a> {
             })
     }
 
-    fn chomp_call_args(
-        &mut self,
-        mut prev: Vec<Expression>,
-    ) -> Result<Vec<Expression>, ParseError> {
+    fn chomp_call_args(&mut self, mut prev: Vec<Expression>) -> Result<Vec<Expression>, Error> {
         match self.lexer.peek() {
             Some(Token::RParen) => Ok(prev),
             Some(Token::Comma) => {
@@ -49,8 +43,8 @@ impl<'a> Parser<'a> {
                 prev.push(expr);
                 self.chomp_call_args(prev)
             }),
-            None => Err(ParseError {
-                expected: ParseErrorExpected::ClosingParenthesis,
+            None => Err(Error {
+                expected: ErrorExpected::ClosingParenthesis,
                 received: None,
             }),
         }
