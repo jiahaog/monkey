@@ -11,8 +11,11 @@ mod error;
 
 pub enum CompileInstruction {
     Constant(Object),
-    Add,
     Pop,
+    Add,
+    Sub,
+    Mul,
+    Div,
 }
 
 type CompileInstructions = Vec<CompileInstruction>;
@@ -80,11 +83,15 @@ impl From<ast::Operator> for CompileInstruction {
     fn from(operator: ast::Operator) -> Self {
         match operator {
             ast::Operator::Plus => CompileInstruction::Add,
+            ast::Operator::Minus => CompileInstruction::Sub,
+            ast::Operator::Multiply => CompileInstruction::Mul,
+            ast::Operator::Divide => CompileInstruction::Div,
             _ => unimplemented!(),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct Output {
     pub instructions: Vec<bytecode::Instruction>,
     pub constants: Vec<Object>,
@@ -113,6 +120,13 @@ impl Output {
                     constants: self.constants,
                 }
             }
+            CompileInstruction::Pop => {
+                self.instructions.push(bytecode::Instruction::OpPop);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
             CompileInstruction::Add => {
                 self.instructions.push(bytecode::Instruction::OpAdd);
                 Self {
@@ -120,8 +134,22 @@ impl Output {
                     constants: self.constants,
                 }
             }
-            CompileInstruction::Pop => {
-                self.instructions.push(bytecode::Instruction::OpPop);
+            CompileInstruction::Sub => {
+                self.instructions.push(bytecode::Instruction::OpSub);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::Mul => {
+                self.instructions.push(bytecode::Instruction::OpMul);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::Div => {
+                self.instructions.push(bytecode::Instruction::OpDiv);
                 Self {
                     instructions: self.instructions,
                     constants: self.constants,

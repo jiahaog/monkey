@@ -78,8 +78,11 @@ impl From<Instruction> for Bytes {
 
                 Bytes::new(bytes)
             }
-            OpAdd => Bytes::new(bytes),
             OpPop => Bytes::new(bytes),
+            OpAdd => Bytes::new(bytes),
+            OpSub => Bytes::new(bytes),
+            OpMul => Bytes::new(bytes),
+            OpDiv => Bytes::new(bytes),
         }
     }
 }

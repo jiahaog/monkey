@@ -1,15 +1,11 @@
 use self::Error::*;
 use crate::ast::{Expression, Operator};
-use crate::object::Object;
+use crate::object::{Object, TypeMismatchError};
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    TypeMismatch {
-        operator: Operator,
-        left: Object,
-        right: Object,
-    },
+    TypeMismatch(TypeMismatchError),
     TypeError {
         message: String,
     },
@@ -35,16 +31,7 @@ impl fmt::Display for Error {
             f,
             "{}",
             match self {
-                TypeMismatch {
-                    operator,
-                    left,
-                    right,
-                } => format!(
-                    "TypeError: unsupported operand type(s) for {}: '{}' and '{}'",
-                    operator,
-                    left.type_str(),
-                    right.type_str(),
-                ),
+                TypeMismatch(err) => format!("{}", err),
                 TypeError { message } => format!("{}", message),
                 UnknownOperation { operator, right } => format!(
                     "TypeError: unsupported operand type(s) for {}: '{}'",
@@ -69,5 +56,11 @@ impl fmt::Display for Error {
                 ),
             }
         )
+    }
+}
+
+impl From<TypeMismatchError> for Error {
+    fn from(err: TypeMismatchError) -> Self {
+        Error::TypeMismatch(err)
     }
 }

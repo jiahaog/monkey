@@ -3,8 +3,12 @@ use super::Instruction;
 pub type OpCode = u8;
 
 pub const OP_CONSTANT: OpCode = 1;
-pub const OP_ADD: OpCode = 2;
 pub const OP_POP: OpCode = 3;
+// TODO fix the ordering.
+pub const OP_ADD: OpCode = 2;
+pub const OP_SUB: OpCode = 4;
+pub const OP_MUL: OpCode = 5;
+pub const OP_DIV: OpCode = 6;
 
 pub struct Definition {
     pub code: OpCode,
@@ -22,14 +26,29 @@ impl From<&Instruction> for Definition {
                 code: OP_CONSTANT,
                 size: 1 + 2, // u16 for operand.
             },
+            OpPop => Self {
+                name: "OpPop",
+                code: OP_POP,
+                size: 1,
+            },
             OpAdd => Self {
                 name: "OpAdd",
                 code: OP_ADD,
                 size: 1,
             },
-            OpPop => Self {
-                name: "OpPop",
-                code: OP_POP,
+            OpSub => Self {
+                name: "OpSub",
+                code: OP_SUB,
+                size: 1,
+            },
+            OpMul => Self {
+                name: "OpMul",
+                code: OP_MUL,
+                size: 1,
+            },
+            OpDiv => Self {
+                name: "OpDiv",
+                code: OP_DIV,
                 size: 1,
             },
         }

@@ -1,3 +1,4 @@
+use crate::ast::Operator;
 use crate::bytecode::Instruction;
 use crate::compiler;
 use crate::object::Object;
@@ -39,22 +40,42 @@ impl Vm {
                             stack
                         })
                     }
-                    Instruction::OpAdd => {
-                        let (left, right) = top_pair_object(&mut stack)?;
-
-                        // TODO this should be shared with eval module
-                        let evaluated = match (left, right) {
-                            (Object::Integer(x), Object::Integer(y)) => Ok(Object::Integer(x + y)),
-                            _ => unimplemented!(),
-                        }?;
-
-                        stack.push(evaluated);
-                        Ok(stack)
-                    }
                     Instruction::OpPop => {
                         let top = last_object(&stack)?;
 
                         self.last_popped = Some(top);
+                        Ok(stack)
+                    }
+                    Instruction::OpAdd => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        let evaluated = left.apply_operator(Operator::Plus, right)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
+                    Instruction::OpSub => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        let evaluated = left.apply_operator(Operator::Minus, right)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
+                    Instruction::OpMul => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        let evaluated = left.apply_operator(Operator::Multiply, right)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
+                    Instruction::OpDiv => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        let evaluated = left.apply_operator(Operator::Divide, right)?;
+
+                        stack.push(evaluated);
                         Ok(stack)
                     }
                 })
@@ -82,8 +103,8 @@ fn top_pair_object(stack: &mut Vec<Object>) -> Result<(Object, Object), Error> {
 }
 
 fn top_pair_object_option(stack: &mut Vec<Object>) -> Option<(Object, Object)> {
-    let left = stack.pop()?;
     let right = stack.pop()?;
+    let left = stack.pop()?;
 
     Some((left, right))
 }

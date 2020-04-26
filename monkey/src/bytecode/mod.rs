@@ -19,8 +19,11 @@ pub enum Instruction {
     // we don't have to deal with a separate constants array. We should only
     // need to play with bytes and indexing when converting from this to bytes.
     OpConstant(u16),
-    OpAdd,
     OpPop,
+    OpAdd,
+    OpSub,
+    OpMul,
+    OpDiv,
 }
 
 impl fmt::Display for Instruction {
@@ -29,8 +32,11 @@ impl fmt::Display for Instruction {
 
         match self {
             OpConstant(pointer) => write!(f, "{} {}", definition.name, pointer),
-            OpAdd => write!(f, "{}", definition.name),
             OpPop => write!(f, "{}", definition.name),
+            OpAdd => write!(f, "{}", definition.name),
+            OpSub => write!(f, "{}", definition.name),
+            OpMul => write!(f, "{}", definition.name),
+            OpDiv => write!(f, "{}", definition.name),
         }
     }
 }

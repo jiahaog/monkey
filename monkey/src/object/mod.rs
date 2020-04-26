@@ -1,7 +1,7 @@
 mod env;
 
 use crate::ast;
-use crate::ast::{format_vec, Statements};
+use crate::ast::{format_vec, Operator, Statements};
 pub use env::Env;
 use std::convert::From;
 use std::fmt;
@@ -79,6 +79,31 @@ impl Object {
         }
         .to_string()
     }
+    pub fn apply_operator(
+        self,
+        operator: Operator,
+        other: Object,
+    ) -> Result<Object, TypeMismatchError> {
+        use Object::*;
+        use Operator::*;
+
+        match (operator, self, other) {
+            (Plus, Integer(left), Integer(right)) => Ok(Integer(left + right)),
+            (Minus, Integer(left), Integer(right)) => Ok(Integer(left - right)),
+            (Multiply, Integer(left), Integer(right)) => Ok(Integer(left * right)),
+            (Divide, Integer(left), Integer(right)) => Ok(Integer(left / right)),
+            (LessThan, Integer(left), Integer(right)) => Ok(Boolean(left < right)),
+            (GreaterThan, Integer(left), Integer(right)) => Ok(Boolean(left > right)),
+            (Plus, Str(left), Str(right)) => Ok(Str(left + &right)),
+            (Equal, left, right) => Ok(Boolean(left == right)),
+            (NotEqual, left, right) => Ok(Boolean(left != right)),
+            (operator, left, right) => Err(TypeMismatchError {
+                operator: operator,
+                left: left,
+                right: right,
+            }),
+        }
+    }
 }
 
 impl fmt::Display for Object {
@@ -133,6 +158,31 @@ impl fmt::Display for Function {
             self.body.iter().fold(String::from("\n"), |acc, line| acc
               // 4 spaces for indentation
                 + &format!("    {};\n", line))
+        )
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TypeMismatchError {
+    pub operator: Operator,
+    pub left: Object,
+    pub right: Object,
+}
+
+impl fmt::Display for TypeMismatchError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let TypeMismatchError {
+            operator,
+            left,
+            right,
+        } = self;
+
+        write!(
+            f,
+            "TypeError: unsupported operand type(s) for {}: '{}' and '{}'",
+            operator,
+            left.type_str(),
+            right.type_str(),
         )
     }
 }

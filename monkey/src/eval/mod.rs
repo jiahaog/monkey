@@ -86,9 +86,14 @@ impl Eval for Expression {
                 left,
                 right,
             } => left.eval(env.clone()).and_then(|left_obj| {
-                right
-                    .eval(env)
-                    .and_then(|right_obj| eval_infix_expr(operator, left_obj, right_obj))
+                right.eval(env).and_then(|right_obj| {
+                    left_obj
+                        .apply_operator(operator, right_obj)
+                        .map_err(|apply_err| {
+                            let err: Error = apply_err.into();
+                            err.into()
+                        })
+                })
             }),
             Expression::If {
                 condition,
@@ -122,6 +127,7 @@ impl Eval for Expression {
     }
 }
 
+// TODO move this to object module and share with vm.
 fn eval_prefix_expr(operator: Operator, right: Object) -> EvalResult {
     match (operator, right) {
         (Operator::Not, Object::Boolean(true)) => Ok(Object::from(false)),
@@ -130,42 +136,6 @@ fn eval_prefix_expr(operator: Operator, right: Object) -> EvalResult {
         (Operator::Minus, Object::Integer(val)) => Ok(Object::Integer(-val)),
         (operator, right) => Err(Error::UnknownOperation {
             operator: operator,
-            right: right,
-        }
-        .into()),
-    }
-}
-
-// TODO move this to object module and share with vm.
-
-fn eval_infix_expr(operator: Operator, left: Object, right: Object) -> EvalResult {
-    match (operator, left, right) {
-        (Operator::Plus, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::Integer(left_val + right_val))
-        }
-        (Operator::Minus, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::Integer(left_val - right_val))
-        }
-        (Operator::Multiply, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::Integer(left_val * right_val))
-        }
-        (Operator::Divide, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::Integer(left_val / right_val))
-        }
-        (Operator::LessThan, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::from(left_val < right_val))
-        }
-        (Operator::GreaterThan, Object::Integer(left_val), Object::Integer(right_val)) => {
-            Ok(Object::from(left_val > right_val))
-        }
-        (Operator::Plus, Object::Str(left_val), Object::Str(right_val)) => {
-            Ok(Object::Str(left_val + &right_val))
-        }
-        (Operator::Equal, left_val, right_val) => Ok(Object::from(left_val == right_val)),
-        (Operator::NotEqual, left_val, right_val) => Ok(Object::from(left_val != right_val)),
-        (operator, left, right) => Err(Error::TypeMismatch {
-            operator: operator,
-            left: left,
             right: right,
         }
         .into()),
