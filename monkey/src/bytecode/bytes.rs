@@ -83,6 +83,8 @@ impl From<Instruction> for Bytes {
             OpSub => Bytes::new(bytes),
             OpMul => Bytes::new(bytes),
             OpDiv => Bytes::new(bytes),
+            OpTrue => Bytes::new(bytes),
+            OpFalse => Bytes::new(bytes),
         }
     }
 }

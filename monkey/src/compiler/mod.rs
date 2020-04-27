@@ -16,6 +16,8 @@ pub enum CompileInstruction {
     Sub,
     Mul,
     Div,
+    True,
+    False,
 }
 
 type CompileInstructions = Vec<CompileInstruction>;
@@ -35,7 +37,7 @@ impl iter::FromIterator<ast::Statement> for Result<Output> {
         let output = nested_instructions
             .into_iter()
             .flatten()
-            .fold(Output::new(), |bytecode, ins| bytecode.add(ins));
+            .fold(Output::new(), |bytecode, ins| bytecode.add_instruction(ins));
 
         Ok(output)
     }
@@ -75,6 +77,11 @@ fn compile_expr(expr: ast::Expression) -> Result<CompileInstructions> {
 
             Ok(vec![CompileInstruction::Constant(object)])
         }
+        ast::Expression::Boolean(value) => Ok(vec![if value {
+            CompileInstruction::True
+        } else {
+            CompileInstruction::False
+        }]),
         _ => unimplemented!(),
     }
 }
@@ -105,7 +112,7 @@ impl Output {
         }
     }
 
-    fn add(mut self, ins: CompileInstruction) -> Self {
+    fn add_instruction(mut self, ins: CompileInstruction) -> Self {
         match ins {
             CompileInstruction::Constant(object) => {
                 let i = self.constants.len();
@@ -150,6 +157,20 @@ impl Output {
             }
             CompileInstruction::Div => {
                 self.instructions.push(bytecode::Instruction::OpDiv);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::True => {
+                self.instructions.push(bytecode::Instruction::OpTrue);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::False => {
+                self.instructions.push(bytecode::Instruction::OpFalse);
                 Self {
                     instructions: self.instructions,
                     constants: self.constants,

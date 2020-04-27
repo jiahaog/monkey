@@ -28,6 +28,8 @@ fn test_integer_arithmetic() {
             vec![Integer(2), Integer(1)],
             vec![OpConstant(0), OpConstant(1), OpDiv, OpPop],
         ),
+        ("true", vec![], vec![OpTrue, OpPop]),
+        ("false", vec![], vec![OpFalse, OpPop]),
     ];
 
     for (input, expected_constants, expected_instructions) in tests {

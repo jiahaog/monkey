@@ -45,9 +45,10 @@ impl fmt::Display for BuiltIn {
     }
 }
 
-// Cache the constants for performance. This might not be necessary.
-const TRUE: Object = Object::Boolean(true);
-const FALSE: Object = Object::Boolean(false);
+// Cache the constants for performance.
+// TODO This might not be necessary.
+pub const TRUE: Object = Object::Boolean(true);
+pub const FALSE: Object = Object::Boolean(false);
 pub const NULL: Object = Object::Null;
 
 impl From<bool> for Object {
@@ -56,6 +57,12 @@ impl From<bool> for Object {
             true => TRUE,
             false => FALSE,
         }
+    }
+}
+
+impl From<isize> for Object {
+    fn from(val: isize) -> Self {
+        Object::Integer(val)
     }
 }
 

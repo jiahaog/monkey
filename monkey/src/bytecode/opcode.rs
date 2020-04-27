@@ -9,6 +9,8 @@ pub const OP_ADD: OpCode = 2;
 pub const OP_SUB: OpCode = 4;
 pub const OP_MUL: OpCode = 5;
 pub const OP_DIV: OpCode = 6;
+pub const OP_TRUE: OpCode = 7;
+pub const OP_FALSE: OpCode = 8;
 
 pub struct Definition {
     pub code: OpCode,
@@ -29,6 +31,16 @@ impl From<&Instruction> for Definition {
             OpPop => Self {
                 name: "OpPop",
                 code: OP_POP,
+                size: 1,
+            },
+            OpTrue => Self {
+                name: "OpTrue",
+                code: OP_TRUE,
+                size: 1,
+            },
+            OpFalse => Self {
+                name: "OpFalse",
+                code: OP_FALSE,
                 size: 1,
             },
             OpAdd => Self {

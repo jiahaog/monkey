@@ -1,7 +1,7 @@
 use crate::ast::Operator;
 use crate::bytecode::Instruction;
 use crate::compiler;
-use crate::object::Object;
+use crate::object::{Object, FALSE, TRUE};
 
 pub use error::Error;
 mod error;
@@ -76,6 +76,14 @@ impl Vm {
                         let evaluated = left.apply_operator(Operator::Divide, right)?;
 
                         stack.push(evaluated);
+                        Ok(stack)
+                    }
+                    Instruction::OpTrue => {
+                        stack.push(TRUE);
+                        Ok(stack)
+                    }
+                    Instruction::OpFalse => {
+                        stack.push(FALSE);
                         Ok(stack)
                     }
                 })

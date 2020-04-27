@@ -24,6 +24,8 @@ pub enum Instruction {
     OpSub,
     OpMul,
     OpDiv,
+    OpTrue,
+    OpFalse,
 }
 
 impl fmt::Display for Instruction {
@@ -37,6 +39,8 @@ impl fmt::Display for Instruction {
             OpSub => write!(f, "{}", definition.name),
             OpMul => write!(f, "{}", definition.name),
             OpDiv => write!(f, "{}", definition.name),
+            OpTrue => write!(f, "{}", definition.name),
+            OpFalse => write!(f, "{}", definition.name),
         }
     }
 }
