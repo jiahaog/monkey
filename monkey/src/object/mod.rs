@@ -66,6 +66,12 @@ impl From<isize> for Object {
     }
 }
 
+impl From<&str> for Object {
+    fn from(val: &str) -> Self {
+        Object::Str(val.to_string())
+    }
+}
+
 impl Object {
     pub fn is_truthy(&self) -> bool {
         match self {
