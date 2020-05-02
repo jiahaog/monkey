@@ -26,6 +26,9 @@ pub enum Instruction {
     OpDiv,
     OpTrue,
     OpFalse,
+    OpGreaterThan,
+    OpEqual,
+    OpNotEqual,
 }
 
 impl fmt::Display for Instruction {
@@ -34,13 +37,7 @@ impl fmt::Display for Instruction {
 
         match self {
             OpConstant(pointer) => write!(f, "{} {}", definition.name, pointer),
-            OpPop => write!(f, "{}", definition.name),
-            OpAdd => write!(f, "{}", definition.name),
-            OpSub => write!(f, "{}", definition.name),
-            OpMul => write!(f, "{}", definition.name),
-            OpDiv => write!(f, "{}", definition.name),
-            OpTrue => write!(f, "{}", definition.name),
-            OpFalse => write!(f, "{}", definition.name),
+            _ => write!(f, "{}", definition.name),
         }
     }
 }

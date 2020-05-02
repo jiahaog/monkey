@@ -86,6 +86,30 @@ impl Vm {
                         stack.push(FALSE);
                         Ok(stack)
                     }
+                    Instruction::OpGreaterThan => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        let evaluated = left.apply_operator(Operator::GreaterThan, right)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
+                    Instruction::OpEqual => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        let evaluated = left.apply_operator(Operator::Equal, right)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
+                    Instruction::OpNotEqual => {
+                        let (left, right) = top_pair_object(&mut stack)?;
+
+                        let evaluated = left.apply_operator(Operator::NotEqual, right)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
                 })
             })
     }

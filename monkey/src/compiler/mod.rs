@@ -18,6 +18,9 @@ pub enum CompileInstruction {
     Div,
     True,
     False,
+    GreaterThan,
+    Equal,
+    NotEqual,
 }
 
 type CompileInstructions = Vec<CompileInstruction>;
@@ -64,11 +67,16 @@ fn compile_expr(expr: ast::Expression) -> Result<CompileInstructions> {
             let right_result = compile_expr(*right)?;
 
             // TODO maybe this is not so efficient.
-            let result = left_result
-                .into_iter()
-                .chain(right_result)
-                .chain(vec![operator.into()])
-                .collect();
+            let result = left_result.into_iter().chain(right_result);
+
+            // We don't have a OpLessThan, so do this instead.
+            let result: Vec<CompileInstruction> = if let ast::Operator::LessThan = operator {
+                result.rev().collect()
+            } else {
+                result.collect()
+            };
+
+            let result = result.into_iter().chain(vec![operator.into()]).collect();
 
             Ok(result)
         }
@@ -93,7 +101,14 @@ impl From<ast::Operator> for CompileInstruction {
             ast::Operator::Minus => CompileInstruction::Sub,
             ast::Operator::Multiply => CompileInstruction::Mul,
             ast::Operator::Divide => CompileInstruction::Div,
-            _ => unimplemented!(),
+            ast::Operator::GreaterThan => CompileInstruction::GreaterThan,
+            // Note that this is the same as GreaterThan. We reverse the
+            // left and right expressions when we encounter this when
+            // compiling.
+            ast::Operator::LessThan => CompileInstruction::GreaterThan,
+            ast::Operator::Equal => CompileInstruction::Equal,
+            ast::Operator::NotEqual => CompileInstruction::NotEqual,
+            x => unimplemented!("{} is not implemented", &x),
         }
     }
 }
@@ -113,6 +128,7 @@ impl Output {
     }
 
     fn add_instruction(mut self, ins: CompileInstruction) -> Self {
+        // TODO: This is extremelty verbose, clean it up.
         match ins {
             CompileInstruction::Constant(object) => {
                 let i = self.constants.len();
@@ -171,6 +187,27 @@ impl Output {
             }
             CompileInstruction::False => {
                 self.instructions.push(bytecode::Instruction::OpFalse);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::GreaterThan => {
+                self.instructions.push(bytecode::Instruction::OpGreaterThan);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::Equal => {
+                self.instructions.push(bytecode::Instruction::OpEqual);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::NotEqual => {
+                self.instructions.push(bytecode::Instruction::OpNotEqual);
                 Self {
                     instructions: self.instructions,
                     constants: self.constants,

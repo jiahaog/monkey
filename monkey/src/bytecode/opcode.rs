@@ -11,6 +11,9 @@ pub const OP_MUL: OpCode = 5;
 pub const OP_DIV: OpCode = 6;
 pub const OP_TRUE: OpCode = 7;
 pub const OP_FALSE: OpCode = 8;
+pub const OP_EQUAL: OpCode = 9;
+pub const OP_NOT_EQUAL: OpCode = 10;
+pub const OP_GREATER_THAN: OpCode = 11;
 
 pub struct Definition {
     pub code: OpCode,
@@ -61,6 +64,21 @@ impl From<&Instruction> for Definition {
             OpDiv => Self {
                 name: "OpDiv",
                 code: OP_DIV,
+                size: 1,
+            },
+            OpGreaterThan => Self {
+                name: "OpGreaterThan",
+                code: OP_GREATER_THAN,
+                size: 1,
+            },
+            OpEqual => Self {
+                name: "OpEqual",
+                code: OP_EQUAL,
+                size: 1,
+            },
+            OpNotEqual => Self {
+                name: "OpNotEqual",
+                code: OP_NOT_EQUAL,
                 size: 1,
             },
         }

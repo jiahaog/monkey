@@ -30,6 +30,36 @@ fn test_integer_arithmetic() {
         ),
         ("true", vec![], vec![OpTrue, OpPop]),
         ("false", vec![], vec![OpFalse, OpPop]),
+        (
+            "1 > 2",
+            vec![Integer(1), Integer(2)],
+            vec![OpConstant(0), OpConstant(1), OpGreaterThan, OpPop],
+        ),
+        (
+            "1 < 2",
+            vec![Integer(2), Integer(1)],
+            vec![OpConstant(0), OpConstant(1), OpGreaterThan, OpPop],
+        ),
+        (
+            "1 == 2",
+            vec![Integer(1), Integer(2)],
+            vec![OpConstant(0), OpConstant(1), OpEqual, OpPop],
+        ),
+        (
+            "1 != 2",
+            vec![Integer(1), Integer(2)],
+            vec![OpConstant(0), OpConstant(1), OpNotEqual, OpPop],
+        ),
+        (
+            "true == false",
+            vec![],
+            vec![OpTrue, OpFalse, OpEqual, OpPop],
+        ),
+        (
+            "true != false",
+            vec![],
+            vec![OpTrue, OpFalse, OpNotEqual, OpPop],
+        ),
     ];
 
     for (input, expected_constants, expected_instructions) in tests {
