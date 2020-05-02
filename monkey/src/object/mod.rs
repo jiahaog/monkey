@@ -92,11 +92,7 @@ impl Object {
         }
         .to_string()
     }
-    pub fn apply_operator(
-        self,
-        operator: Operator,
-        other: Object,
-    ) -> Result<Object, TypeMismatchError> {
+    pub fn apply_operator(self, operator: Operator, other: Object) -> Result<Object, Error> {
         use Object::*;
         use Operator::*;
 
@@ -110,9 +106,24 @@ impl Object {
             (Plus, Str(left), Str(right)) => Ok(Str(left + &right)),
             (Equal, left, right) => Ok(Boolean(left == right)),
             (NotEqual, left, right) => Ok(Boolean(left != right)),
-            (operator, left, right) => Err(TypeMismatchError {
+            (operator, left, right) => Err(Error::TypeMismatch {
                 operator: operator,
                 left: left,
+                right: right,
+            }),
+        }
+    }
+    pub fn apply_prefix_operator(self, operator: Operator) -> Result<Object, Error> {
+        use Object::*;
+        use Operator::*;
+
+        match (operator, self) {
+            (Not, Boolean(true)) => Ok(Boolean(false)),
+            (Not, Boolean(false)) => Ok(Boolean(true)),
+            (Not, Integer(_)) => Ok(Boolean(false)),
+            (Minus, Integer(val)) => Ok(Integer(-val)),
+            (operator, right) => Err(Error::UnknownOperation {
+                operator: operator,
                 right: right,
             }),
         }
@@ -176,26 +187,39 @@ impl fmt::Display for Function {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct TypeMismatchError {
-    pub operator: Operator,
-    pub left: Object,
-    pub right: Object,
+pub enum Error {
+    TypeMismatch {
+        operator: Operator,
+        left: Object,
+        right: Object,
+    },
+    UnknownOperation {
+        operator: Operator,
+        right: Object,
+    },
 }
 
-impl fmt::Display for TypeMismatchError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let TypeMismatchError {
-            operator,
-            left,
-            right,
-        } = self;
-
-        write!(
-            f,
-            "TypeError: unsupported operand type(s) for {}: '{}' and '{}'",
-            operator,
-            left.type_str(),
-            right.type_str(),
-        )
+        use Error::*;
+        match self {
+            TypeMismatch {
+                operator,
+                left,
+                right,
+            } => write!(
+                f,
+                "TypeError: unsupported operand type(s) for {}: '{}' and '{}'",
+                operator,
+                left.type_str(),
+                right.type_str(),
+            ),
+            UnknownOperation { operator, right } => write!(
+                f,
+                "TypeError: unsupported operand type(s) for {}: '{}'",
+                operator,
+                right.type_str(),
+            ),
+        }
     }
 }

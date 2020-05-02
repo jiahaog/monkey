@@ -41,7 +41,7 @@ impl Vm {
                         })
                     }
                     Instruction::OpPop => {
-                        let top = last_object(&stack)?;
+                        let top = top_object(&stack)?;
 
                         self.last_popped = Some(top);
                         Ok(stack)
@@ -110,6 +110,22 @@ impl Vm {
                         stack.push(evaluated);
                         Ok(stack)
                     }
+                    Instruction::OpNeg => {
+                        let top = top_object(&stack)?;
+
+                        let evaluated = top.apply_prefix_operator(Operator::Minus)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
+                    Instruction::OpNot => {
+                        let top = top_object(&stack)?;
+
+                        let evaluated = top.apply_prefix_operator(Operator::Not)?;
+
+                        stack.push(evaluated);
+                        Ok(stack)
+                    }
                 })
             })
     }
@@ -121,7 +137,7 @@ fn ith_object(stack: &Vec<Object>, i: usize) -> Result<Object, Error> {
     stack.get(i).cloned().ok_or(Error::StackOutOfRange)
 }
 
-fn last_object(stack: &Vec<Object>) -> Result<Object, Error> {
+fn top_object(stack: &Vec<Object>) -> Result<Object, Error> {
     if stack.len() == 0 {
         Err(Error::StackOutOfRange)
     } else {

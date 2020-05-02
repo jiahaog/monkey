@@ -14,6 +14,8 @@ pub const OP_FALSE: OpCode = 8;
 pub const OP_EQUAL: OpCode = 9;
 pub const OP_NOT_EQUAL: OpCode = 10;
 pub const OP_GREATER_THAN: OpCode = 11;
+pub const OP_NEG: OpCode = 12;
+pub const OP_NOT: OpCode = 13;
 
 pub struct Definition {
     pub code: OpCode,
@@ -79,6 +81,16 @@ impl From<&Instruction> for Definition {
             OpNotEqual => Self {
                 name: "OpNotEqual",
                 code: OP_NOT_EQUAL,
+                size: 1,
+            },
+            OpNeg => Self {
+                name: "OpNeg",
+                code: OP_NEG,
+                size: 1,
+            },
+            OpNot => Self {
+                name: "OpNot",
+                code: OP_NOT,
                 size: 1,
             },
         }

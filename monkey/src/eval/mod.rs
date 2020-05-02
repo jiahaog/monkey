@@ -8,7 +8,7 @@ mod tests;
 use self::apply::Applicable;
 pub use self::error::Error;
 use self::eval::{eval_exprs, Eval, EvalResult, ShortCircuit};
-use crate::ast::{CallFunctionExpression, Expression, Operator, Program, Statement, Statements};
+use crate::ast::{CallFunctionExpression, Expression, Program, Statement, Statements};
 use crate::object::{BuiltIn, Env, Function, Object, NULL};
 
 impl Program {
@@ -78,9 +78,12 @@ impl Eval for Expression {
                 eval_exprs(env, vals).and_then(|objs| Object::List(objs).into())
             }
             Expression::Boolean(val) => Object::from(val).into(),
-            Expression::Prefix { operator, right } => right
-                .eval(env)
-                .and_then(|object| eval_prefix_expr(operator, object)),
+            Expression::Prefix { operator, right } => right.eval(env).and_then(|object| {
+                object.apply_prefix_operator(operator).map_err(|apply_err| {
+                    let err: Error = apply_err.into();
+                    err.into()
+                })
+            }),
             Expression::Infix {
                 operator,
                 left,
@@ -124,21 +127,6 @@ impl Eval for Expression {
             }
             Expression::Index { left, index } => BuiltIn::Index.apply(env, vec![*left, *index]),
         }
-    }
-}
-
-// TODO move this to object module and share with vm.
-fn eval_prefix_expr(operator: Operator, right: Object) -> EvalResult {
-    match (operator, right) {
-        (Operator::Not, Object::Boolean(true)) => Ok(Object::from(false)),
-        (Operator::Not, Object::Boolean(false)) => Ok(Object::from(true)),
-        (Operator::Not, Object::Integer(_)) => Ok(Object::from(false)),
-        (Operator::Minus, Object::Integer(val)) => Ok(Object::Integer(-val)),
-        (operator, right) => Err(Error::UnknownOperation {
-            operator: operator,
-            right: right,
-        }
-        .into()),
     }
 }
 

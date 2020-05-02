@@ -29,6 +29,8 @@ pub enum Instruction {
     OpGreaterThan,
     OpEqual,
     OpNotEqual,
+    OpNeg,
+    OpNot,
 }
 
 impl fmt::Display for Instruction {

@@ -21,6 +21,8 @@ pub enum CompileInstruction {
     GreaterThan,
     Equal,
     NotEqual,
+    Neg,
+    Not,
 }
 
 type CompileInstructions = Vec<CompileInstruction>;
@@ -58,6 +60,24 @@ fn compile_statement(statement: ast::Statement) -> Result<CompileInstructions> {
 
 fn compile_expr(expr: ast::Expression) -> Result<CompileInstructions> {
     match expr {
+        ast::Expression::Prefix { operator, right } => {
+            let right_result = compile_expr(*right)?;
+
+            let mut result_operator = operator.into();
+
+            // TODO: This is an inelegant hack because we want operator.into()
+            // to return different results when it is a prefix expression.
+            if let CompileInstruction::Sub = result_operator {
+                result_operator = CompileInstruction::Neg;
+            }
+
+            let result = right_result
+                .into_iter()
+                .chain(vec![result_operator])
+                .collect();
+
+            Ok(result)
+        }
         ast::Expression::Infix {
             operator,
             left,
@@ -108,7 +128,7 @@ impl From<ast::Operator> for CompileInstruction {
             ast::Operator::LessThan => CompileInstruction::GreaterThan,
             ast::Operator::Equal => CompileInstruction::Equal,
             ast::Operator::NotEqual => CompileInstruction::NotEqual,
-            x => unimplemented!("{} is not implemented", &x),
+            ast::Operator::Not => CompileInstruction::Not,
         }
     }
 }
@@ -208,6 +228,20 @@ impl Output {
             }
             CompileInstruction::NotEqual => {
                 self.instructions.push(bytecode::Instruction::OpNotEqual);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::Neg => {
+                self.instructions.push(bytecode::Instruction::OpNeg);
+                Self {
+                    instructions: self.instructions,
+                    constants: self.constants,
+                }
+            }
+            CompileInstruction::Not => {
+                self.instructions.push(bytecode::Instruction::OpNot);
                 Self {
                     instructions: self.instructions,
                     constants: self.constants,

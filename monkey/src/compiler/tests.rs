@@ -60,6 +60,8 @@ fn test_integer_arithmetic() {
             vec![],
             vec![OpTrue, OpFalse, OpNotEqual, OpPop],
         ),
+        ("-1", vec![Integer(1)], vec![OpConstant(0), OpNeg, OpPop]),
+        ("!true", vec![], vec![OpTrue, OpNot, OpPop]),
     ];
 
     for (input, expected_constants, expected_instructions) in tests {
@@ -72,6 +74,8 @@ fn test_integer_arithmetic() {
         test_constants(expected_constants, bytecode.constants);
     }
 }
+
+// TODO testing of type mismatch.
 
 fn test_constants(expected: Vec<Object>, received: Vec<Object>) {
     assert_eq!(expected, received);

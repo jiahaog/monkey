@@ -1,17 +1,14 @@
 use self::Error::*;
-use crate::ast::{Expression, Operator};
-use crate::object::{Object, TypeMismatchError};
+use crate::ast::Expression;
+use crate::object;
+use crate::object::Object;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    TypeMismatch(TypeMismatchError),
+    ObjectError(object::Error),
     TypeError {
         message: String,
-    },
-    UnknownOperation {
-        operator: Operator,
-        right: Object,
     },
     IdentifierNotFound {
         name: String,
@@ -31,13 +28,8 @@ impl fmt::Display for Error {
             f,
             "{}",
             match self {
-                TypeMismatch(err) => format!("{}", err),
+                ObjectError(err) => format!("{}", err),
                 TypeError { message } => format!("{}", message),
-                UnknownOperation { operator, right } => format!(
-                    "TypeError: unsupported operand type(s) for {}: '{}'",
-                    operator,
-                    right.type_str(),
-                ),
                 IdentifierNotFound { name } => format!("NameError: name '{}' is not defined", name),
                 CallExpressionExpectedFunction { received } => format!(
                     "TypeError: '{}' object is not callable",
@@ -59,8 +51,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl From<TypeMismatchError> for Error {
-    fn from(err: TypeMismatchError) -> Self {
-        Error::TypeMismatch(err)
+impl From<object::Error> for Error {
+    fn from(err: object::Error) -> Self {
+        Error::ObjectError(err)
     }
 }

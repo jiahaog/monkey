@@ -1,7 +1,8 @@
 use crate::ast::{Expression, Operator, Statement};
 use crate::eval::Error;
 use crate::lexer::Lexer;
-use crate::object::{Env, Function, Object, TypeMismatchError, NULL};
+use crate::object;
+use crate::object::{Env, Function, Object, NULL};
 use crate::parser::Parser;
 use std::rc::Rc;
 
@@ -144,55 +145,50 @@ fn test_error_expr() {
     let cases = vec![
         (
             "5 + true;",
-            TypeMismatchError {
+            object::Error::TypeMismatch {
                 operator: Operator::Plus,
                 left: Object::Integer(5),
                 right: Object::Boolean(true),
-            }
-            .into(),
+            },
         ),
         (
             "5 + true; 5;",
-            TypeMismatchError {
+            object::Error::TypeMismatch {
                 operator: Operator::Plus,
                 left: Object::Integer(5),
                 right: Object::Boolean(true),
-            }
-            .into(),
+            },
         ),
         (
             "-true;",
-            Error::UnknownOperation {
+            object::Error::UnknownOperation {
                 operator: Operator::Minus,
                 right: Object::Boolean(true),
             },
         ),
         (
             "true + false;",
-            TypeMismatchError {
+            object::Error::TypeMismatch {
                 operator: Operator::Plus,
                 left: Object::Boolean(true),
                 right: Object::Boolean(false),
-            }
-            .into(),
+            },
         ),
         (
             "5; true + false; 5;",
-            TypeMismatchError {
+            object::Error::TypeMismatch {
                 operator: Operator::Plus,
                 left: Object::Boolean(true),
                 right: Object::Boolean(false),
-            }
-            .into(),
+            },
         ),
         (
             "if (10 > 1) { true + false; }",
-            TypeMismatchError {
+            object::Error::TypeMismatch {
                 operator: Operator::Plus,
                 left: Object::Boolean(true),
                 right: Object::Boolean(false),
-            }
-            .into(),
+            },
         ),
         (
             "
@@ -204,17 +200,16 @@ fn test_error_expr() {
                 return 1;
             }
            ",
-            TypeMismatchError {
+            object::Error::TypeMismatch {
                 operator: Operator::Plus,
                 left: Object::Boolean(true),
                 right: Object::Boolean(false),
-            }
-            .into(),
+            },
         ),
     ];
 
     for (inp, expected) in cases {
-        test_eval_error(expected, inp);
+        test_eval_error(expected.into(), inp);
     }
 }
 
