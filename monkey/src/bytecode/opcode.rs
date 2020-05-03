@@ -16,7 +16,9 @@ pub const OP_NOT_EQUAL: OpCode = 10;
 pub const OP_GREATER_THAN: OpCode = 11;
 pub const OP_NEG: OpCode = 12;
 pub const OP_NOT: OpCode = 13;
-pub const OP_JUMP_NOT_TRUTHY: OpCode = 14;
+pub const OP_JUMP: OpCode = 14;
+pub const OP_JUMP_NOT_TRUTHY: OpCode = 15;
+pub const OP_NULL: OpCode = 16;
 
 pub struct Definition {
     pub code: OpCode,
@@ -94,10 +96,20 @@ impl From<&Instruction> for Definition {
                 code: OP_NOT,
                 size: 1,
             },
+            OpJump(_) => Self {
+                name: "OpJump",
+                code: OP_JUMP,
+                size: 1 + 2,
+            },
             OpJumpNotTruthy(_) => Self {
                 name: "OpJumpNotTruthy",
                 code: OP_JUMP_NOT_TRUTHY,
                 size: 1 + 2,
+            },
+            OpNull => Self {
+                name: "OpNull",
+                code: OP_NULL,
+                size: 1,
             },
         }
     }

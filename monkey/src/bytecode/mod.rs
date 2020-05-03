@@ -29,7 +29,9 @@ pub enum Instruction {
     OpNotEqual,
     OpNeg,
     OpNot,
+    OpJump(u16),
     OpJumpNotTruthy(u16),
+    OpNull,
 }
 
 impl Instruction {

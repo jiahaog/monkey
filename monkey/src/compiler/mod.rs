@@ -24,9 +24,11 @@ pub enum CompileInstruction {
     NotEqual,
     Neg,
     Not,
-    // This is the number of bytes to jump forward relative to the current
+    // The field is the number of bytes to jump forward relative to the current
     // position.
+    Jump(u16),
     JumpNotTruthy(u16),
+    Null,
 }
 
 type CompileInstructions = Vec<CompileInstruction>;
@@ -62,6 +64,12 @@ impl iter::FromIterator<ast::Statement> for Result<CompileInstructions> {
             .into_iter()
             .flatten()
             .collect::<CompileInstructions>();
+
+        let ins = if ins.is_empty() {
+            vec![CompileInstruction::Null, CompileInstruction::Pop]
+        } else {
+            ins
+        };
 
         Ok(ins)
     }
@@ -132,38 +140,54 @@ fn compile_expr(expr: ast::Expression) -> Result<CompileInstructions> {
         ast::Expression::If {
             condition,
             consequence,
-            alternative: _,
+            alternative,
         } => {
-            let condition_result = compile_expr(*condition)?;
-            let mut consequence_result = consequence
+            // Reverse order of compilation.
+
+            let alternative_result = compile_if_block(alternative)?;
+            let alternative_len = ins_len(&alternative_result);
+
+            let consequence_result = compile_if_block(consequence)?
                 .into_iter()
-                .collect::<Result<CompileInstructions>>()?;
+                .chain(vec![CompileInstruction::Jump(alternative_len)])
+                .collect::<CompileInstructions>();
 
-            // Keep the last statement on the stack because if blocks are assignable.
-            // TODO What about when the if block is empty?
-            match consequence_result.pop() {
-                Some(CompileInstruction::Pop) => (),
-                _ => panic!("Expected last compile instruction of a condition to be OpPop"),
-            };
-
-            let consequence_len = consequence_result
-                .iter()
-                .map(|ins| {
-                    let ins: bytecode::Instruction = ins.into();
-                    ins.size()
-                })
-                .sum();
+            let condition_result = compile_expr(*condition)?.into_iter().chain(vec![
+                CompileInstruction::JumpNotTruthy(ins_len(&consequence_result)),
+            ]);
 
             let result = condition_result
-                .into_iter()
-                .chain(vec![CompileInstruction::JumpNotTruthy(consequence_len)])
                 .chain(consequence_result)
+                .chain(alternative_result)
                 .collect::<CompileInstructions>();
 
             Ok(result)
         }
         _ => unimplemented!(),
     }
+}
+
+fn compile_if_block(statements: ast::Statements) -> Result<CompileInstructions> {
+    let mut ins = statements
+        .into_iter()
+        .collect::<Result<CompileInstructions>>()?;
+
+    // Keep the last statement on the stack because if blocks are assignable expressions.
+    match ins.pop() {
+        Some(CompileInstruction::Pop) => (),
+        _ => panic!("Expected last compile instruction of a condition to be OpPop"),
+    };
+
+    Ok(ins)
+}
+
+fn ins_len(ins: &CompileInstructions) -> u16 {
+    ins.iter()
+        .map(|ins| {
+            let ins: bytecode::Instruction = ins.into();
+            ins.size()
+        })
+        .sum()
 }
 
 impl From<ast::Operator> for CompileInstruction {
@@ -190,23 +214,26 @@ const DUMMY_OPERAND: u16 = 999;
 
 impl From<&CompileInstruction> for bytecode::Instruction {
     fn from(ins: &CompileInstruction) -> Self {
+        use bytecode::Instruction::*;
+        use CompileInstruction::*;
+
         match ins {
-            CompileInstruction::Constant(_) => bytecode::Instruction::OpConstant(DUMMY_OPERAND),
-            CompileInstruction::JumpNotTruthy(_) => {
-                bytecode::Instruction::OpJumpNotTruthy(DUMMY_OPERAND)
-            }
-            CompileInstruction::Pop => bytecode::Instruction::OpPop,
-            CompileInstruction::Add => bytecode::Instruction::OpAdd,
-            CompileInstruction::Sub => bytecode::Instruction::OpSub,
-            CompileInstruction::Mul => bytecode::Instruction::OpMul,
-            CompileInstruction::Div => bytecode::Instruction::OpDiv,
-            CompileInstruction::True => bytecode::Instruction::OpTrue,
-            CompileInstruction::False => bytecode::Instruction::OpFalse,
-            CompileInstruction::GreaterThan => bytecode::Instruction::OpGreaterThan,
-            CompileInstruction::Equal => bytecode::Instruction::OpEqual,
-            CompileInstruction::NotEqual => bytecode::Instruction::OpNotEqual,
-            CompileInstruction::Neg => bytecode::Instruction::OpNeg,
-            CompileInstruction::Not => bytecode::Instruction::OpNot,
+            Constant(_) => OpConstant(DUMMY_OPERAND),
+            Jump(_) => OpJump(DUMMY_OPERAND),
+            JumpNotTruthy(_) => OpJumpNotTruthy(DUMMY_OPERAND),
+            Pop => OpPop,
+            Add => OpAdd,
+            Sub => OpSub,
+            Mul => OpMul,
+            Div => OpDiv,
+            True => OpTrue,
+            False => OpFalse,
+            GreaterThan => OpGreaterThan,
+            Equal => OpEqual,
+            NotEqual => OpNotEqual,
+            Neg => OpNeg,
+            Not => OpNot,
+            Null => OpNull,
         }
     }
 }
@@ -236,6 +263,12 @@ impl Output {
                 self.constants.push(object);
 
                 bytecode::Instruction::OpConstant(i as u16)
+            }
+            CompileInstruction::Jump(location) => {
+                let current_size = bytecode::Instruction::from(&ins).size();
+
+                let jump_address = self.index + current_size + location;
+                bytecode::Instruction::OpJump(jump_address)
             }
             CompileInstruction::JumpNotTruthy(location) => {
                 let current_size = bytecode::Instruction::from(&ins).size();

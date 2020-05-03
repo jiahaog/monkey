@@ -18,6 +18,23 @@ pub struct Vm {
 // TODO: Make this a proper struct.
 pub type Stack = Vec<Object>;
 
+// struct OrderedInstructions {
+//     instructions: Vec<Instruction>,
+//     index: usize,
+// }
+
+// impl Iterator for OrderedInstructions {
+//     type Item = &Instruction;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         match self.instructions.get(self.index) {
+//             None => None,
+//             // Some(Instruction::OpJump(index)) | Some(Instruction::OpJump(index)) => todo!(),
+//             x => x,
+//         }
+//     }
+// }
+
 impl Vm {
     pub fn new() -> Self {
         Self { last_popped: None }
@@ -33,6 +50,7 @@ impl Vm {
         instructions
             .into_iter()
             // TOOD make the stack a field.
+            // TODO use try_fold instead.
             .fold(Ok(stack), |result, instruction| {
                 // todo
                 result.and_then(|mut stack| match instruction {
