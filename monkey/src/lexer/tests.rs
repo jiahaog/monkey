@@ -4,8 +4,6 @@ use crate::token::Token::*;
 
 #[test]
 fn test_next_token_symbols() {
-    assert_eq!(2 + 2, 4);
-
     let input = "=+(){},;-!*/<>";
 
     let expected = vec![
@@ -124,8 +122,6 @@ let result = add(five, ten);
 
 #[test]
 fn test_next_token_extended() {
-    assert_eq!(2 + 2, 4);
-
     let input = r#"!-/*5;
 5 < 10 > 5;
 

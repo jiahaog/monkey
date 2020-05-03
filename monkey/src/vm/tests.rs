@@ -1,4 +1,5 @@
 use super::*;
+use crate::object::Object;
 
 #[test]
 fn test_integer_arithmetic() {
@@ -21,7 +22,7 @@ fn test_integer_arithmetic() {
         let mut vm = Vm::new();
         let _ = vm.run(Vec::new(), inp).unwrap();
 
-        assert_eq!(vm.last_popped().unwrap(), &expected.into());
+        assert_eq!(&Object::from(expected), vm.last_popped().unwrap());
     }
 }
 
@@ -53,6 +54,6 @@ fn test_boolean() {
         let mut vm = Vm::new();
         let _ = vm.run(Vec::new(), inp).unwrap();
 
-        assert_eq!(vm.last_popped().unwrap(), &expected.into());
+        assert_eq!(&Object::from(expected), vm.last_popped().unwrap());
     }
 }
