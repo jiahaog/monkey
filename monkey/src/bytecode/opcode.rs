@@ -16,11 +16,12 @@ pub const OP_NOT_EQUAL: OpCode = 10;
 pub const OP_GREATER_THAN: OpCode = 11;
 pub const OP_NEG: OpCode = 12;
 pub const OP_NOT: OpCode = 13;
+pub const OP_JUMP_NOT_TRUTHY: OpCode = 14;
 
 pub struct Definition {
     pub code: OpCode,
     pub name: &'static str,
-    pub size: usize,
+    pub size: u16,
 }
 
 impl From<&Instruction> for Definition {
@@ -92,6 +93,11 @@ impl From<&Instruction> for Definition {
                 name: "OpNot",
                 code: OP_NOT,
                 size: 1,
+            },
+            OpJumpNotTruthy(_) => Self {
+                name: "OpJumpNotTruthy",
+                code: OP_JUMP_NOT_TRUTHY,
+                size: 1 + 2,
             },
         }
     }

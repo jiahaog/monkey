@@ -51,7 +51,7 @@ impl fmt::Display for Bytes {
                          instruction| {
                             (
                                 format!("{}{:04} {}\n", acc, i, instruction),
-                                i + Definition::from(&instruction).size,
+                                i + instruction.size(),
                             )
                         },
                     )

@@ -1,7 +1,9 @@
-use std::fmt;
+use std::{fmt, num};
+
 #[derive(Debug)]
 pub enum Error {
     // TODO: Add variants.
+    Overflow,
 }
 
 impl fmt::Display for Error {
@@ -11,3 +13,9 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+impl From<num::TryFromIntError> for Error {
+    fn from(_: num::TryFromIntError) -> Self {
+        Error::Overflow
+    }
+}

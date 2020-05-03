@@ -6,7 +6,8 @@ use crate::object::{Object, FALSE, TRUE};
 pub use error::Error;
 mod error;
 
-const STACK_SIZE: usize = 2048;
+// TODO use this somehow.
+const _STACK_SIZE: usize = 2048;
 
 pub struct Vm {
     // For testing.
@@ -26,6 +27,7 @@ impl Vm {
         let compiler::Output {
             constants,
             instructions,
+            ..
         } = compiled;
 
         instructions
@@ -126,6 +128,7 @@ impl Vm {
                         stack.push(evaluated);
                         Ok(stack)
                     }
+                    _ => todo!(),
                 })
             })
     }

@@ -1,16 +1,14 @@
-use opcode::Definition;
-use std::fmt;
-
 mod bytes;
 mod opcode;
-
-pub use bytes::Bytes;
-use opcode::*;
-
 #[cfg(test)]
 mod tests;
 
+use opcode::*;
+use std::fmt;
 use Instruction::*;
+
+pub use bytes::Bytes;
+use opcode::Definition;
 
 #[derive(PartialEq, Debug)]
 pub enum Instruction {
@@ -31,6 +29,14 @@ pub enum Instruction {
     OpNotEqual,
     OpNeg,
     OpNot,
+    OpJumpNotTruthy(u16),
+}
+
+impl Instruction {
+    pub fn size(&self) -> u16 {
+        let definition: Definition = self.into();
+        definition.size
+    }
 }
 
 impl fmt::Display for Instruction {

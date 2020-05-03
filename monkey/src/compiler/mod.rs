@@ -9,6 +9,7 @@ mod tests;
 
 mod error;
 
+#[derive(Debug)]
 pub enum CompileInstruction {
     Constant(Object),
     Pop,
@@ -23,6 +24,9 @@ pub enum CompileInstruction {
     NotEqual,
     Neg,
     Not,
+    // This is the number of bytes to jump forward relative to the current
+    // position.
+    JumpNotTruthy(u16),
 }
 
 type CompileInstructions = Vec<CompileInstruction>;
@@ -34,17 +38,32 @@ pub fn compile(program: ast::Program) -> Result<Output> {
 
 impl iter::FromIterator<ast::Statement> for Result<Output> {
     fn from_iter<I: IntoIterator<Item = ast::Statement>>(statements: I) -> Self {
+        let compiled_instructions = statements
+            .into_iter()
+            .collect::<Result<CompileInstructions>>()?;
+
+        let output = compiled_instructions
+            .into_iter()
+            .fold(Output::new(), |bytecode, ins| bytecode.add_instruction(ins));
+
+        Ok(output)
+    }
+}
+
+impl iter::FromIterator<ast::Statement> for Result<CompileInstructions> {
+    fn from_iter<I: IntoIterator<Item = ast::Statement>>(statements: I) -> Self {
+        // TODO figure out a way to avoid two collects(). Maybe flat_map ?
         let nested_instructions = statements
             .into_iter()
             .map(compile_statement)
             .collect::<Result<Vec<CompileInstructions>>>()?;
 
-        let output = nested_instructions
+        let ins = nested_instructions
             .into_iter()
             .flatten()
-            .fold(Output::new(), |bytecode, ins| bytecode.add_instruction(ins));
+            .collect::<CompileInstructions>();
 
-        Ok(output)
+        Ok(ins)
     }
 }
 
@@ -110,6 +129,39 @@ fn compile_expr(expr: ast::Expression) -> Result<CompileInstructions> {
         } else {
             CompileInstruction::False
         }]),
+        ast::Expression::If {
+            condition,
+            consequence,
+            alternative: _,
+        } => {
+            let condition_result = compile_expr(*condition)?;
+            let mut consequence_result = consequence
+                .into_iter()
+                .collect::<Result<CompileInstructions>>()?;
+
+            // Keep the last statement on the stack because if blocks are assignable.
+            // TODO What about when the if block is empty?
+            match consequence_result.pop() {
+                Some(CompileInstruction::Pop) => (),
+                _ => panic!("Expected last compile instruction of a condition to be OpPop"),
+            };
+
+            let consequence_len = consequence_result
+                .iter()
+                .map(|ins| {
+                    let ins: bytecode::Instruction = ins.into();
+                    ins.size()
+                })
+                .sum();
+
+            let result = condition_result
+                .into_iter()
+                .chain(vec![CompileInstruction::JumpNotTruthy(consequence_len)])
+                .chain(consequence_result)
+                .collect::<CompileInstructions>();
+
+            Ok(result)
+        }
         _ => unimplemented!(),
     }
 }
@@ -133,10 +185,38 @@ impl From<ast::Operator> for CompileInstruction {
     }
 }
 
+// TODO Better way to get operand details instead of using a dummy operand.
+const DUMMY_OPERAND: u16 = 999;
+
+impl From<&CompileInstruction> for bytecode::Instruction {
+    fn from(ins: &CompileInstruction) -> Self {
+        match ins {
+            CompileInstruction::Constant(_) => bytecode::Instruction::OpConstant(DUMMY_OPERAND),
+            CompileInstruction::JumpNotTruthy(_) => {
+                bytecode::Instruction::OpJumpNotTruthy(DUMMY_OPERAND)
+            }
+            CompileInstruction::Pop => bytecode::Instruction::OpPop,
+            CompileInstruction::Add => bytecode::Instruction::OpAdd,
+            CompileInstruction::Sub => bytecode::Instruction::OpSub,
+            CompileInstruction::Mul => bytecode::Instruction::OpMul,
+            CompileInstruction::Div => bytecode::Instruction::OpDiv,
+            CompileInstruction::True => bytecode::Instruction::OpTrue,
+            CompileInstruction::False => bytecode::Instruction::OpFalse,
+            CompileInstruction::GreaterThan => bytecode::Instruction::OpGreaterThan,
+            CompileInstruction::Equal => bytecode::Instruction::OpEqual,
+            CompileInstruction::NotEqual => bytecode::Instruction::OpNotEqual,
+            CompileInstruction::Neg => bytecode::Instruction::OpNeg,
+            CompileInstruction::Not => bytecode::Instruction::OpNot,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Output {
     pub instructions: Vec<bytecode::Instruction>,
     pub constants: Vec<Object>,
+    // Index to place the next instruction, in number of bytes.
+    index: u16,
 }
 
 impl Output {
@@ -144,109 +224,35 @@ impl Output {
         Self {
             instructions: Vec::new(),
             constants: Vec::new(),
+            index: 0,
         }
     }
 
     fn add_instruction(mut self, ins: CompileInstruction) -> Self {
         // TODO: This is extremelty verbose, clean it up.
-        match ins {
+        let bytecode_ins = match ins {
             CompileInstruction::Constant(object) => {
                 let i = self.constants.len();
                 self.constants.push(object);
 
-                let instruction = bytecode::Instruction::OpConstant(i as u16);
+                bytecode::Instruction::OpConstant(i as u16)
+            }
+            CompileInstruction::JumpNotTruthy(location) => {
+                let current_size = bytecode::Instruction::from(&ins).size();
 
-                self.instructions.push(instruction);
+                let jump_address = self.index + current_size + location;
+                bytecode::Instruction::OpJumpNotTruthy(jump_address)
+            }
+            // Zero operand instructions.
+            ins => (&ins).into(),
+        };
 
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Pop => {
-                self.instructions.push(bytecode::Instruction::OpPop);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Add => {
-                self.instructions.push(bytecode::Instruction::OpAdd);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Sub => {
-                self.instructions.push(bytecode::Instruction::OpSub);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Mul => {
-                self.instructions.push(bytecode::Instruction::OpMul);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Div => {
-                self.instructions.push(bytecode::Instruction::OpDiv);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::True => {
-                self.instructions.push(bytecode::Instruction::OpTrue);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::False => {
-                self.instructions.push(bytecode::Instruction::OpFalse);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::GreaterThan => {
-                self.instructions.push(bytecode::Instruction::OpGreaterThan);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Equal => {
-                self.instructions.push(bytecode::Instruction::OpEqual);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::NotEqual => {
-                self.instructions.push(bytecode::Instruction::OpNotEqual);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Neg => {
-                self.instructions.push(bytecode::Instruction::OpNeg);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
-            CompileInstruction::Not => {
-                self.instructions.push(bytecode::Instruction::OpNot);
-                Self {
-                    instructions: self.instructions,
-                    constants: self.constants,
-                }
-            }
+        let ins_size = bytecode_ins.size();
+        self.instructions.push(bytecode_ins);
+        Self {
+            instructions: self.instructions,
+            constants: self.constants,
+            index: self.index + ins_size,
         }
     }
 }

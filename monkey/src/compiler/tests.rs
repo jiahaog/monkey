@@ -62,6 +62,24 @@ fn test_integer_arithmetic() {
         ),
         ("-1", vec![Integer(1)], vec![OpConstant(0), OpNeg, OpPop]),
         ("!true", vec![], vec![OpTrue, OpNot, OpPop]),
+        (
+            "if (true) { 10 }; 3333",
+            vec![Integer(10), Integer(3333)],
+            vec![
+                // 0000
+                OpTrue,
+                // 0001
+                OpJumpNotTruthy(7),
+                // 0004
+                OpConstant(0),
+                // 0007
+                OpPop,
+                // 0008
+                OpConstant(1),
+                // 0011
+                OpPop,
+            ],
+        ),
     ];
 
     for (input, expected_constants, expected_instructions) in tests {
